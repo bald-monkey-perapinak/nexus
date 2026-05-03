@@ -35,12 +35,12 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
-    build:
-      context: ./frontend
+    build: ./frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     ports:
-      - "3000:80"  # только фронтенд доступен снаружи
+      - "3000:80" # только фронтенд доступен снаружи
 
   bot:
     build:
