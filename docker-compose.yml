@@ -9,8 +9,7 @@ services:
       POSTGRES_DB: nexus
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Порт не пробрасываем наружу — только внутри Docker-сети
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -19,8 +18,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # Порт не пробрасываем наружу
 
   backend:
     build:
@@ -29,8 +27,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+    # Только внутренний порт — nginx проксирует
+    expose:
+      - "8000"
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -41,7 +40,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "3000:80"
+      - "3000:80"  # только фронтенд доступен снаружи
 
   bot:
     build:
