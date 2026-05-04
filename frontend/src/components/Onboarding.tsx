@@ -10,10 +10,13 @@ function Chip({ label, selected, onClick }: { label: string; selected: boolean; 
   return <div className={`chip ${selected ? 'selected' : ''}`} onClick={onClick}>{label}</div>
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="form-group">
-      <div className="form-label">{label}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div className="form-label">{label}</div>
+        {hint && <div className="t-small">{hint}</div>}
+      </div>
       {children}
     </div>
   )
@@ -23,9 +26,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState(1)
   const [profile, setProfile] = useState<Partial<UserProfile>>({
     business_type: [],
-    has_clients: false,
-    has_premises: false,
-    has_partners: false,
+    has_clients: false, has_premises: false, has_partners: false,
     is_main_income: true,
   })
 
@@ -35,35 +36,37 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     set(k, arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
   }
 
-  const canStep1 = profile.capital_range && profile.format && (profile.business_type?.length ?? 0) > 0 && profile.team_size
+  const canStep1 = profile.capital_range && profile.format &&
+    (profile.business_type?.length ?? 0) > 0 && profile.team_size
 
   return (
     <div className="screen">
 
-      {/* Top bar */}
+      {/* Header */}
       <div className="top-bar">
-        <div className="top-bar-meta">
-          <div className="eyebrow">Шаг {step} из 2</div>
-          <div className="display-sm">{step === 1 ? 'Ваш профиль' : 'Детали'}</div>
+        <div>
+          <div className="t-label" style={{ marginBottom: 4 }}>Шаг {step} из 2</div>
+          <div className="t-title">{step === 1 ? 'Ваш профиль' : 'Детали'}</div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-          <NexusLogo size={28} />
-          <div className="step-dots">
-            <div className={`step-dot ${step >= 1 ? 'active' : ''}`} />
-            <div className={`step-dot ${step >= 2 ? 'active' : ''}`} />
-          </div>
+        <NexusLogo size={36} />
+      </div>
+
+      {/* Progress */}
+      <div style={{ marginBottom: 24 }}>
+        <div className="progress-track">
+          <div className="progress-fill" style={{ width: step === 1 ? '50%' : '100%' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+          <div className="t-small">{step === 1 ? 'Основные параметры' : 'Детали и предпочтения'}</div>
+          <div className="t-small">{step}/2</div>
         </div>
       </div>
 
-      <div className="rule" style={{ marginBottom: 24 }} />
-
-      {/* Form */}
       <div className="scroll-area">
-
         {step === 1 && (
-          <div style={{ animation: 'screenIn 0.3s var(--ease) both' }}>
+          <div style={{ animation: 'fadeUp 0.3s var(--ease) both' }}>
 
-            <Field label="Стартовый капитал">
+            <Field label="Стартовый капитал" hint="Сколько готовы вложить">
               <div className="chips">
                 {['до 500к', '500к–2м', '2м–5м', '5м+'].map(o => (
                   <Chip key={o} label={o} selected={profile.capital_range === o} onClick={() => set('capital_range', o)} />
@@ -73,21 +76,21 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             <Field label="Формат бизнеса">
               <div className="chips">
-                {[['offline', 'Офлайн'], ['online', 'Онлайн'], ['hybrid', 'Гибрид']].map(([v, l]) => (
+                {[['offline','🏪 Офлайн'],['online','💻 Онлайн'],['hybrid','🔄 Гибрид']].map(([v,l]) => (
                   <Chip key={v} label={l} selected={profile.format === v} onClick={() => set('format', v)} />
                 ))}
               </div>
             </Field>
 
-            <Field label="Тип клиентов">
+            <Field label="Тип клиентов" hint="Можно несколько">
               <div className="chips">
                 {['B2C', 'B2B', 'B2G'].map(o => (
-                  <Chip key={o} label={o} selected={(profile.business_type || []).includes(o)} onClick={() => toggle('business_type', o)} />
+                  <Chip key={o} label={o} selected={(profile.business_type||[]).includes(o)} onClick={() => toggle('business_type', o)} />
                 ))}
               </div>
             </Field>
 
-            <Field label="Команда">
+            <Field label="Команда на старте">
               <div className="chips">
                 {['1 (только я)', '2–5', '6–15', '15+'].map(o => (
                   <Chip key={o} label={o} selected={profile.team_size === o} onClick={() => set('team_size', o)} />
@@ -95,7 +98,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
             </Field>
 
-            <Field label="Желаемая окупаемость (мес)">
+            <Field label="Желаемая окупаемость" hint="Месяцев">
               <div className="chips">
                 {['3–6', '6–12', '12–24', '24+'].map(o => (
                   <Chip key={o} label={o} selected={profile.payback_period === o} onClick={() => set('payback_period', o)} />
@@ -112,7 +115,19 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         )}
 
         {step === 2 && (
-          <div style={{ animation: 'screenIn 0.3s var(--ease) both' }}>
+          <div style={{ animation: 'fadeUp 0.3s var(--ease) both' }}>
+
+            {/* Tip card */}
+            <div style={{
+              background: 'var(--indigo-light)', border: '1px solid var(--indigo-mid)',
+              borderRadius: 'var(--r)', padding: '12px 14px', marginBottom: 20,
+              display: 'flex', gap: 10, alignItems: 'flex-start',
+            }}>
+              <span style={{ fontSize: 18 }}>💡</span>
+              <div className="t-small" style={{ color: 'var(--indigo)', lineHeight: 1.5 }}>
+                Чем точнее заполните — тем лучше подберутся идеи. Поля необязательные.
+              </div>
+            </div>
 
             <Field label="Ваш опыт и навыки">
               <textarea className="form-textarea"
@@ -128,7 +143,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             <Field label="Уровень технологичности">
               <div className="chips">
-                {[['low', 'Низкий'], ['medium', 'Средний'], ['high', 'Высокий']].map(([v, l]) => (
+                {[['low','🔧 Низкий'],['medium','⚙️ Средний'],['high','🤖 Высокий']].map(([v,l]) => (
                   <Chip key={v} label={l} selected={profile.tech_level === v} onClick={() => set('tech_level', v)} />
                 ))}
               </div>
@@ -136,61 +151,48 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             <Field label="Риск-профиль">
               <div className="chips">
-                {[['conservative', 'Консервативный'], ['moderate', 'Умеренный'], ['aggressive', 'Агрессивный']].map(([v, l]) => (
+                {[['conservative','🛡️ Консервативный'],['moderate','⚖️ Умеренный'],['aggressive','🚀 Агрессивный']].map(([v,l]) => (
                   <Chip key={v} label={l} selected={profile.risk_profile === v} onClick={() => set('risk_profile', v)} />
                 ))}
               </div>
             </Field>
 
-            <Field label="Основной доход?">
+            <Field label="Это основной доход?">
               <div className="chips">
-                <Chip label="Да, основной" selected={profile.is_main_income === true} onClick={() => set('is_main_income', true)} />
-                <Chip label="Нет, побочный" selected={profile.is_main_income === false} onClick={() => set('is_main_income', false)} />
+                <Chip label="✅ Да, основной" selected={profile.is_main_income === true} onClick={() => set('is_main_income', true)} />
+                <Chip label="➕ Нет, побочный" selected={profile.is_main_income === false} onClick={() => set('is_main_income', false)} />
               </div>
             </Field>
 
             <Field label="Что уже есть">
               <div className="chips">
-                <Chip label="Клиенты" selected={!!profile.has_clients} onClick={() => set('has_clients', !profile.has_clients)} />
-                <Chip label="Помещение" selected={!!profile.has_premises} onClick={() => set('has_premises', !profile.has_premises)} />
-                <Chip label="Партнёры" selected={!!profile.has_partners} onClick={() => set('has_partners', !profile.has_partners)} />
+                <Chip label="👥 Клиенты" selected={!!profile.has_clients} onClick={() => set('has_clients', !profile.has_clients)} />
+                <Chip label="🏠 Помещение" selected={!!profile.has_premises} onClick={() => set('has_premises', !profile.has_premises)} />
+                <Chip label="🤝 Партнёры" selected={!!profile.has_partners} onClick={() => set('has_partners', !profile.has_partners)} />
               </div>
             </Field>
 
+            <div style={{ height: 80 }} />
           </div>
         )}
-
-        <div style={{ height: 100 }} />
       </div>
 
-      {/* Bottom actions */}
-      <div style={{
-        paddingTop: 16,
-        display: 'flex',
-        gap: 8,
-        borderTop: '1px solid rgba(15,15,15,0.1)',
-        paddingBottom: 8,
-        background: 'var(--parch)',
-        position: 'sticky',
-        bottom: 0,
-        marginLeft: -20,
-        marginRight: -20,
-        padding: '14px 20px 8px',
-      }}>
-        {step === 2 && (
-          <button className="btn btn-ghost" onClick={() => setStep(1)}
-            style={{ width: 44, minWidth: 44, padding: '10px', border: '1.5px solid rgba(15,15,15,0.15)' }}>
-            <span>←</span>
+      {/* Footer */}
+      <div className="sticky-footer">
+        <div style={{ display: 'flex', gap: 10 }}>
+          {step === 2 && (
+            <button className="btn btn-outline" onClick={() => setStep(1)}
+              style={{ width: 48, padding: '13px 0', flexShrink: 0 }}>←</button>
+          )}
+          <button
+            className="btn btn-primary"
+            disabled={step === 1 ? !canStep1 : false}
+            onClick={step === 1 ? () => setStep(2) : () => onComplete(profile as UserProfile)}
+          >
+            {step === 1 ? 'Далее' : '🚀 Сгенерировать идеи'}
+            {step === 1 && <ArrowRight size={16} />}
           </button>
-        )}
-        <button
-          className="btn btn-fill"
-          disabled={step === 1 ? !canStep1 : false}
-          onClick={step === 1 ? () => setStep(2) : () => onComplete(profile as UserProfile)}
-        >
-          <span>{step === 1 ? 'Далее' : 'Сгенерировать идеи'}</span>
-          <ArrowRight size={12} />
-        </button>
+        </div>
       </div>
     </div>
   )

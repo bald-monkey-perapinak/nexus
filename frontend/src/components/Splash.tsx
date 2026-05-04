@@ -1,4 +1,4 @@
-import { NexusLogo, ArrowRight } from './Icons'
+import { NexusLogo, HeroIllustration, ArrowRight } from './Icons'
 
 interface SplashProps {
   onStart: () => void
@@ -7,83 +7,96 @@ interface SplashProps {
 
 export function Splash({ onStart, loading }: SplashProps) {
   return (
-    <div className="splash-wrap">
-      {/* Corner labels */}
-      <div className="splash-corner-tl stagger-1">
-        Nexus Platform · Series 001
-      </div>
-      <div className="splash-corner-br stagger-1">
-        AI · LangGraph · Groq
-      </div>
-      <div className="splash-vertical-label">
-        Business Intelligence Platform
-      </div>
+    <div className="screen" style={{ justifyContent: 'space-between', minHeight: '100dvh' }}>
 
-      {/* Main content — vertically centered */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0 }}>
-
-        {/* Logo mark */}
-        <div className="stagger-1" style={{ marginBottom: 32 }}>
-          <NexusLogo size={52} />
-        </div>
-
-        {/* Hero type */}
-        <div className="stagger-2" style={{ marginBottom: 4 }}>
-          <div className="display" style={{ color: 'var(--carbon)' }}>NEXUS</div>
-        </div>
-
-        <div className="stagger-3" style={{ marginBottom: 32 }}>
-          <div style={{
-            fontFamily: 'var(--f-serif)',
-            fontSize: 'clamp(15px, 4vw, 20px)',
-            color: 'var(--carbon-3)',
-            lineHeight: 1.35,
-            maxWidth: 260,
-          }}>
-            Бизнес-идеи, точно подобранные под ваш профиль
+      {/* Header */}
+      <div className="top-bar s1">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <NexusLogo size={36} />
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1 }}>Nexus</div>
+            <div className="t-label" style={{ marginTop: 2 }}>v0.2 · AI Platform</div>
           </div>
         </div>
+        <div className="badge badge-indigo">Beta</div>
+      </div>
 
-        {/* Divider with label */}
-        <div className="stagger-3" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--carbon)', opacity: 0.15 }} />
-          <div className="eyebrow">Как это работает</div>
-          <div style={{ flex: 1, height: 1, background: 'var(--carbon)', opacity: 0.15 }} />
+      {/* Hero illustration */}
+      <div className="s2" style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+        <HeroIllustration />
+      </div>
+
+      {/* Copy */}
+      <div className="s3" style={{ textAlign: 'center', padding: '0 8px' }}>
+        <div className="t-hero" style={{ marginBottom: 12 }}>
+          Бизнес-идеи под ваш профиль
         </div>
-
-        {/* Steps */}
-        <div className="stagger-4" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
-          {[
-            ['01', 'Профиль', 'Капитал, опыт, цели — 2 минуты'],
-            ['02', 'AI-анализ', '8 идей × 3 дискриминатора параллельно'],
-            ['03', 'Финмодель', 'Сценарии, CAC/LTV, окупаемость'],
-          ].map(([num, title, desc]) => (
-            <div key={num} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{
-                width: 28, height: 28,
-                background: 'var(--carbon)',
-                color: 'var(--parch)',
-                fontFamily: 'var(--f-display)',
-                fontSize: 15,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>{num}</div>
-              <div>
-                <div style={{ fontFamily: 'var(--f-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</div>
-                <div style={{ fontSize: 11, color: 'var(--carbon-4)', marginTop: 1 }}>{desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div className="stagger-5">
-          <button className="btn btn-fill" onClick={onStart} disabled={loading}>
-            <span>{loading ? 'Подождите...' : 'Начать'}</span>
-            {!loading && <ArrowRight size={13} />}
-          </button>
+        <div className="t-subtitle" style={{ maxWidth: 300, margin: '0 auto' }}>
+          AI анализирует ваш капитал, опыт и цели — и выдаёт идеи с финансовыми моделями
         </div>
       </div>
+
+      {/* Feature pills */}
+      <div className="s4" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+        {[
+          ['🧠', '3 AI-фильтра'],
+          ['📊', 'Финмодель'],
+          ['✅', 'CustDev скрипт'],
+          ['🗺️', 'Роадмап'],
+        ].map(([icon, text]) => (
+          <div key={text} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: 'var(--bg-2)', border: '1px solid var(--border)',
+            borderRadius: 100, padding: '6px 12px',
+            fontSize: 13, color: 'var(--text-2)', fontWeight: 500,
+          }}>
+            <span>{icon}</span>
+            <span>{text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Steps */}
+      <div className="s4" style={{
+        background: 'var(--bg-2)', border: '1px solid var(--border)',
+        borderRadius: 'var(--r-lg)', padding: '16px',
+      }}>
+        {[
+          ['01', 'Профиль', 'Капитал, опыт, цели — 2 минуты'],
+          ['02', 'Генерация', '8 идей через 3 параллельных AI-фильтра'],
+          ['03', 'Финмодель', 'Сценарии, CAC/LTV, интерактивные слайдеры'],
+        ].map(([num, title, desc], i) => (
+          <div key={num} style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            paddingBottom: i < 2 ? 12 : 0,
+            marginBottom: i < 2 ? 12 : 0,
+            borderBottom: i < 2 ? '1px solid var(--border)' : 'none',
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'var(--indigo)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 700, flexShrink: 0,
+            }}>{num}</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>{title}</div>
+              <div className="t-small">{desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <div className="s5">
+        <button className="btn btn-primary" onClick={onStart} disabled={loading}>
+          {loading ? 'Подождите…' : 'Начать бесплатно'}
+          {!loading && <ArrowRight size={16} />}
+        </button>
+        <div className="t-small" style={{ textAlign: 'center', marginTop: 10 }}>
+          Бесплатно · ~2 минуты · Без регистрации
+        </div>
+      </div>
+
     </div>
   )
 }
