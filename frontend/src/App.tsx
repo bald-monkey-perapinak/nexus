@@ -3,40 +3,38 @@ import { authTelegram, saveProfile, generateIdeas, setToken, getToken } from './
 import { getTelegramInitData, tgReady } from './telegram'
 import type { AppScreen, IdeaCard, UserProfile } from './types'
 
-import { Splash }                from './components/Splash'
-import { Onboarding }            from './components/Onboarding'
-import { Generating }            from './components/Generating'
-import { IdeasList }             from './components/IdeasList'
-import { IdeaDetail }            from './components/IdeaDetail'
-import { FinancialModelScreen }  from './components/FinancialModel'
-import { ValidationScreen }      from './components/Validation'
+import { Splash }               from './components/Splash'
+import { Onboarding }           from './components/Onboarding'
+import { Generating }           from './components/Generating'
+import { IdeasList }            from './components/IdeasList'
+import { IdeaDetail }           from './components/IdeaDetail'
+import { FinancialModelScreen } from './components/FinancialModel'
+import { ValidationScreen }     from './components/Validation'
+import { RoadmapScreen }        from './components/Roadmap'
 
-type ExtendedScreen = AppScreen | 'validation'
+type Screen = AppScreen | 'validation' | 'roadmap'
 
 export default function App() {
-  const [screen, setScreen]         = useState<ExtendedScreen>('splash')
-  const [authLoading, setAuthLoading] = useState(false)
-  const [error, setError]           = useState('')
-  const [sessionId, setSessionId]   = useState('')
-  const [ideas, setIdeas]           = useState<IdeaCard[]>([])
-  const [selectedIdea, setSelectedIdea] = useState<IdeaCard | null>(null)
+  const [screen, setScreen]       = useState<Screen>('splash')
+  const [authLoading, setAuth]    = useState(false)
+  const [error, setError]         = useState('')
+  const [sessionId, setSessionId] = useState('')
+  const [ideas, setIdeas]         = useState<IdeaCard[]>([])
+  const [idea, setIdea]           = useState<IdeaCard | null>(null)
 
-  useEffect(() => {
-    tgReady()
-    if (getToken()) setScreen('onboarding')
-  }, [])
+  useEffect(() => { tgReady(); if (getToken()) setScreen('onboarding') }, [])
 
   async function handleStart() {
-    setAuthLoading(true); setError('')
+    setAuth(true); setError('')
     try {
       const auth = await authTelegram(getTelegramInitData())
       setToken(auth.access_token)
       setScreen('onboarding')
     } catch (e: unknown) { setError((e as Error).message) }
-    finally { setAuthLoading(false) }
+    finally { setAuth(false) }
   }
 
-  async function handleProfileDone(profile: UserProfile) {
+  async function handleProfile(profile: UserProfile) {
     setError('')
     try {
       await saveProfile(profile)
@@ -48,37 +46,37 @@ export default function App() {
 
   return (
     <>
-      {screen === 'splash' && <Splash onStart={handleStart} loading={authLoading} />}
-      {screen === 'onboarding' && <Onboarding onComplete={handleProfileDone} />}
-      {screen === 'generating' && (
+      {screen === 'splash'      && <Splash onStart={handleStart} loading={authLoading} />}
+      {screen === 'onboarding'  && <Onboarding onComplete={handleProfile} />}
+      {screen === 'generating'  && (
         <Generating sessionId={sessionId}
-          onDone={ideas => { setIdeas(ideas); setScreen('ideas') }}
-          onError={msg  => { setError(msg);   setScreen('splash') }}
+          onDone={list => { setIdeas(list); setScreen('ideas') }}
+          onError={msg => { setError(msg); setScreen('splash') }}
         />
       )}
-      {screen === 'ideas' && (
+      {screen === 'ideas'       && (
         <IdeasList ideas={ideas}
-          onSelect={idea => { setSelectedIdea(idea); setScreen('idea_detail') }}
+          onSelect={i => { setIdea(i); setScreen('idea_detail') }}
         />
       )}
-      {screen === 'idea_detail' && selectedIdea && (
-        <IdeaDetail
-          idea={selectedIdea}
+      {screen === 'idea_detail' && idea && (
+        <IdeaDetail idea={idea}
           onBack={() => setScreen('ideas')}
           onBuildModel={() => setScreen('financial')}
           onValidate={() => setScreen('validation')}
+          onRoadmap={() => setScreen('roadmap')}
         />
       )}
-      {screen === 'financial' && selectedIdea && (
-        <FinancialModelScreen idea={selectedIdea} sessionId={sessionId} onBack={() => setScreen('idea_detail')} />
+      {screen === 'financial'   && idea && (
+        <FinancialModelScreen idea={idea} sessionId={sessionId} onBack={() => setScreen('idea_detail')} />
       )}
-      {screen === 'validation' && selectedIdea && (
-        <ValidationScreen
-          ideaId={selectedIdea.id}
-          sessionId={sessionId}
-          ideaTitle={selectedIdea.title}
-          onBack={() => setScreen('idea_detail')}
-        />
+      {screen === 'validation'  && idea && (
+        <ValidationScreen ideaId={idea.id} sessionId={sessionId}
+          ideaTitle={idea.title} onBack={() => setScreen('idea_detail')} />
+      )}
+      {screen === 'roadmap'     && idea && (
+        <RoadmapScreen ideaId={idea.id} sessionId={sessionId}
+          ideaTitle={idea.title} onBack={() => setScreen('idea_detail')} />
       )}
 
       {error && (

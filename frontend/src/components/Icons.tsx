@@ -224,3 +224,55 @@ export function ValidationIllustration() {
     </svg>
   )
 }
+
+// ── Roadmap illustration ──────────────────────────────
+export function RoadmapIllustration() {
+  return (
+    <svg viewBox="0 0 300 160" fill="none" style={{ width: '100%', maxWidth: 300 }}>
+      {/* Timeline spine */}
+      <line x1="30" y1="20" x2="30" y2="145" stroke="#C7D2FE" strokeWidth="2" strokeDasharray="4 3"/>
+
+      {/* Week markers + nodes */}
+      {[
+        { y: 28,  label: 'Нед 1–4', title: 'Фундамент',   color: '#4F46E5', bg: '#EEF2FF' },
+        { y: 72,  label: 'Нед 5–8', title: 'Первые продажи', color: '#059669', bg: '#ECFDF5' },
+        { y: 116, label: 'Нед 9–12',title: 'Оптимизация', color: '#D97706', bg: '#FFFBEB' },
+      ].map(({ y, label, title, color, bg }) => (
+        <g key={y}>
+          <circle cx="30" cy={y} r="8" fill={color}/>
+          <rect x="46" y={y - 16} width="220" height="32" rx="8" fill={bg} stroke={color} strokeWidth="1" strokeOpacity="0.3"/>
+          <text x="56" y={y - 3} fontSize="9" fill={color} fontFamily="Inter,sans-serif" fontWeight="700" letterSpacing="0.05em">
+            {label}
+          </text>
+          <text x="56" y={y + 10} fontSize="11" fill="#374151" fontFamily="Inter,sans-serif" fontWeight="600">
+            {title}
+          </text>
+        </g>
+      ))}
+
+      {/* Floating task chips */}
+      {[
+        { x: 176, y: 22,  w: 60, label: '⚖️ Юрлицо' },
+        { x: 248, y: 22,  w: 52, label: '🏦 Счёт' },
+        { x: 176, y: 66,  w: 76, label: '📣 Маркетинг' },
+        { x: 176, y: 110, w: 64, label: '📊 Анализ' },
+      ].map(({ x, y, w, label }) => (
+        <g key={`${x}-${y}`}>
+          <rect x={x} y={y} width={w} height={18} rx="9" fill="white" stroke="#E4E7EC" strokeWidth="1"/>
+          <text x={x + w/2} y={y + 12} fontSize="8.5" textAnchor="middle" fill="#6B7280" fontFamily="Inter,sans-serif">
+            {label}
+          </text>
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+// ── Category icons ────────────────────────────────────
+export function CategoryIcon({ cat, size = 16 }: { cat: string; size?: number }) {
+  const map: Record<string, string> = {
+    legal: '⚖️', finance: '💰', marketing: '📣',
+    ops: '⚙️', hiring: '👥', product: '🛠️',
+  }
+  return <span style={{ fontSize: size }}>{map[cat] || '📌'}</span>
+}

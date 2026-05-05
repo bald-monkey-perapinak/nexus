@@ -6,6 +6,7 @@ interface IdeaDetailProps {
   onBack: () => void
   onBuildModel: () => void
   onValidate: () => void
+  onRoadmap: () => void
 }
 
 const FLAG_META: Record<string, [string, string]> = {
@@ -168,7 +169,7 @@ export function IdeaDetail({ idea, onBack, onBuildModel, onValidate }: IdeaDetai
       {/* Sticky CTA */}
       <div className="sticky-footer">
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-outline" onClick={onValidate} style={{ fontSize: 13 }}>
+          <button className="btn btn-outline btn-sm" onClick={onValidate}>
             ✅ Валидация
           </button>
           <button className="btn btn-primary" onClick={onBuildModel}>
