@@ -132,7 +132,7 @@ const GLYPHS = [
 
 export function IdeaGlyph({ index, size = 20 }: { index: number; size?: number }) {
   const G = GLYPHS[index % GLYPHS.length]
-  return <G size={size} />
+  return <>{G(size)}</>
 }
 
 // ── Arrow icons ───────────────────────────────────────

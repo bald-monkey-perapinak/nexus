@@ -1,32 +1,43 @@
 import json
 import re
 import asyncio
-from typing import Literal
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
 from app.state import IdeaGenerationState
 from app.config import settings
 
-# Main model for generation (big context needed)
-llm = ChatGroq(
-    model=settings.GROQ_MODEL,
-    api_key=settings.GROQ_API_KEY,
-    temperature=0.7,
-    max_tokens=4096,
-)
+# Lazy initialization
+_llm = None
+_llm_fast = None
+_graph = None
 
-# Fast model for discriminators (parallel, low latency)
-llm_fast = ChatGroq(
-    model=settings.GROQ_MODEL_FAST,
-    api_key=settings.GROQ_API_KEY,
-    temperature=0.1,
-    max_tokens=300,
-)
+
+def get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(
+            model=settings.GROQ_MODEL,
+            api_key=settings.GROQ_API_KEY,
+            temperature=0.7,
+            max_tokens=4096,
+        )
+    return _llm
+
+
+def get_llm_fast():
+    global _llm_fast
+    if _llm_fast is None:
+        _llm_fast = ChatGroq(
+            model=settings.GROQ_MODEL_FAST,
+            api_key=settings.GROQ_API_KEY,
+            temperature=0.1,
+            max_tokens=300,
+        )
+    return _llm_fast
 
 
 def _parse_json(text: str):
     text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
-    # Handle single-object wrapped in array brackets mismatch
     return json.loads(text)
 
 
@@ -127,7 +138,7 @@ async def generate_candidates(state: IdeaGenerationState) -> IdeaGenerationState
             risk_profile=p.get("risk_profile", "moderate"),
             is_main_income=p.get("is_main_income", True),
         )
-        resp = await llm.ainvoke(prompt)
+        resp = await get_llm().ainvoke(prompt)
         ideas = _parse_json(resp.content)
         if not isinstance(ideas, list):
             raise ValueError("Expected JSON array")
@@ -137,7 +148,6 @@ async def generate_candidates(state: IdeaGenerationState) -> IdeaGenerationState
 
 
 async def _discriminate(idea: dict, profile: dict, disc_type: str) -> dict:
-    """Run one discriminator, return scored result. Falls back to warn on error."""
     try:
         if disc_type == "financial":
             prompt = FINANCIAL_DISC_PROMPT.format(
@@ -153,7 +163,7 @@ async def _discriminate(idea: dict, profile: dict, disc_type: str) -> dict:
                 format=profile.get("format", ""),
                 business_type=", ".join(profile.get("business_type", [])),
             )
-        else:  # ops
+        else:
             prompt = OPS_DISC_PROMPT.format(
                 title=idea["title"], description=idea.get("description", ""),
                 requires_license=idea.get("requires_license", False),
@@ -164,8 +174,9 @@ async def _discriminate(idea: dict, profile: dict, disc_type: str) -> dict:
                 risk_profile=profile.get("risk_profile", "moderate"),
             )
 
-        resp = await llm_fast.ainvoke(prompt)
-        text = re.sub(r"```(?:json)?", "", resp.content.strip()).strip().rstrip("`")
+        resp = await get_llm_fast().ainvoke(prompt)
+        text = re.sub(r"```(?:json)?", "", resp.content.strip()
+                      ).strip().rstrip("`")
         r = json.loads(text)
         return {
             "verdict": r.get("verdict", "warn"),
@@ -236,8 +247,9 @@ async def enrich_cards(state: IdeaGenerationState) -> IdeaGenerationState:
                 description=idea.get("description", ""),
                 score=idea.get("total_score", 50),
             )
-            resp = await llm_fast.ainvoke(prompt)
-            text = re.sub(r"```(?:json)?", "", resp.content.strip()).strip().rstrip("`")
+            resp = await get_llm_fast().ainvoke(prompt)
+            text = re.sub(r"```(?:json)?", "",
+                          resp.content.strip()).strip().rstrip("`")
             extra = json.loads(text)
             return {**idea, **extra}
         except Exception:
@@ -269,11 +281,15 @@ def build_idea_generation_graph():
     return g.compile()
 
 
-idea_generation_graph = build_idea_generation_graph()
+def get_graph():
+    global _graph
+    if _graph is None:
+        _graph = build_idea_generation_graph()
+    return _graph
 
 
 async def run_idea_generation(user_id: str, session_id: str, profile: dict) -> dict:
-    return await idea_generation_graph.ainvoke({
+    return await get_graph().ainvoke({
         "user_id": user_id,
         "session_id": session_id,
         "profile": profile,
