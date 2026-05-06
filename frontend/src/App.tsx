@@ -15,12 +15,12 @@ import { RoadmapScreen }        from './components/Roadmap'
 type Screen = AppScreen | 'validation' | 'roadmap'
 
 export default function App() {
-  const [screen, setScreen]       = useState<Screen>('splash')
-  const [authLoading, setAuth]    = useState(false)
-  const [error, setError]         = useState('')
-  const [sessionId, setSessionId] = useState('')
-  const [ideas, setIdeas]         = useState<IdeaCard[]>([])
-  const [idea, setIdea]           = useState<IdeaCard | null>(null)
+  const [screen, setScreen]     = useState<Screen>('splash')
+  const [authLoading, setAuth]  = useState(false)
+  const [error, setError]       = useState('')
+  const [sessionId, setSid]     = useState('')
+  const [ideas, setIdeas]       = useState<IdeaCard[]>([])
+  const [idea, setIdea]         = useState<IdeaCard | null>(null)
 
   useEffect(() => { tgReady(); if (getToken()) setScreen('onboarding') }, [])
 
@@ -39,7 +39,7 @@ export default function App() {
     try {
       await saveProfile(profile)
       const gen = await generateIdeas()
-      setSessionId(gen.session_id)
+      setSid(gen.session_id)
       setScreen('generating')
     } catch (e: unknown) { setError((e as Error).message) }
   }
@@ -51,37 +51,34 @@ export default function App() {
       {screen === 'generating'  && (
         <Generating sessionId={sessionId}
           onDone={list => { setIdeas(list); setScreen('ideas') }}
-          onError={msg => { setError(msg); setScreen('splash') }}
-        />
+          onError={msg  => { setError(msg); setScreen('splash') }} />
       )}
       {screen === 'ideas'       && (
         <IdeasList ideas={ideas}
-          onSelect={i => { setIdea(i); setScreen('idea_detail') }}
-        />
+          onSelect={i => { setIdea(i); setScreen('idea_detail') }} />
       )}
       {screen === 'idea_detail' && idea && (
         <IdeaDetail idea={idea}
           onBack={() => setScreen('ideas')}
           onBuildModel={() => setScreen('financial')}
           onValidate={() => setScreen('validation')}
-          onRoadmap={() => setScreen('roadmap')}
-        />
+          onRoadmap={() => setScreen('roadmap')} />
       )}
-      {screen === 'financial'   && idea && (
+      {screen === 'financial'  && idea && (
         <FinancialModelScreen idea={idea} sessionId={sessionId} onBack={() => setScreen('idea_detail')} />
       )}
-      {screen === 'validation'  && idea && (
+      {screen === 'validation' && idea && (
         <ValidationScreen ideaId={idea.id} sessionId={sessionId}
           ideaTitle={idea.title} onBack={() => setScreen('idea_detail')} />
       )}
-      {screen === 'roadmap'     && idea && (
+      {screen === 'roadmap'    && idea && (
         <RoadmapScreen ideaId={idea.id} sessionId={sessionId}
           ideaTitle={idea.title} onBack={() => setScreen('idea_detail')} />
       )}
 
       {error && (
         <div className="toast">
-          <span>{error}</span>
+          <span style={{ fontFamily: 'var(--f)' }}>{error}</span>
           <button className="toast-close" onClick={() => setError('')}>×</button>
         </div>
       )}

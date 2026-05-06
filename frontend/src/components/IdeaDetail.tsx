@@ -1,15 +1,12 @@
 import type { IdeaCard } from '../types'
 import { IdeaGlyph, ScoreRing, ArrowRight, ChevronLeft } from './Icons'
 
-interface IdeaDetailProps {
-  idea: IdeaCard
-  onBack: () => void
-  onBuildModel: () => void
-  onValidate: () => void
-  onRoadmap: () => void
+interface Props {
+  idea: IdeaCard; onBack: () => void
+  onBuildModel: () => void; onValidate: () => void; onRoadmap: () => void
 }
 
-const FLAG_META: Record<string, [string, string]> = {
+const FLAGS: Record<string, [string, string]> = {
   capital_tight:        ['💸', 'Капитал на пределе'],
   capital_insufficient: ['❌', 'Недостаточно капитала'],
   high_competition:     ['⚔️', 'Высокая конкуренция'],
@@ -17,8 +14,8 @@ const FLAG_META: Record<string, [string, string]> = {
   license_medical:      ['🏥', 'Мед. лицензия'],
   license_education:    ['🎓', 'Образ. лицензия'],
   license_alcohol:      ['🍷', 'Лицензия на алкоголь'],
-  market_saturated:     ['📉', 'Насыщенный рынок'],
-  market_declining:     ['📉', 'Падающий рынок'],
+  market_saturated:     ['📉', 'Насыщен рынок'],
+  market_declining:     ['📉', 'Рынок падает'],
   payback_too_long:     ['⏳', 'Долгая окупаемость'],
   team_insufficient:    ['👥', 'Нехватка команды'],
   experience_gap:       ['📚', 'Нет нужного опыта'],
@@ -28,158 +25,129 @@ const FLAG_META: Record<string, [string, string]> = {
 
 function VerdictCard({ label, verdict }: { label: string; verdict: string }) {
   const cfg = {
-    pass: { icon: '✓', bg: 'var(--emerald-bg)', color: 'var(--emerald)', border: 'rgba(5,150,105,0.2)' },
-    warn: { icon: '!', bg: 'var(--amber-bg)',   color: 'var(--amber)',   border: 'rgba(217,119,6,0.2)'  },
-    fail: { icon: '✕', bg: 'var(--rose-bg)',    color: 'var(--rose)',    border: 'rgba(225,29,72,0.2)'  },
-  }[verdict] || { icon: '?', bg: 'var(--bg-2)', color: 'var(--text-3)', border: 'var(--border)' }
-
+    pass: { icon: '✓', color: 'var(--lime)',  bg: 'var(--lime-dim)',  border: 'rgba(170,255,62,0.2)' },
+    warn: { icon: '!', color: 'var(--amber)', bg: 'var(--amber-dim)', border: 'rgba(255,184,0,0.2)' },
+    fail: { icon: '✕', color: 'var(--rose)',  bg: 'var(--rose-dim)',  border: 'rgba(255,77,106,0.2)' },
+  }[verdict] || { icon: '?', color: 'var(--t3)', bg: 'var(--bg-card)', border: 'var(--b2)' }
   return (
     <div className="verdict-pill" style={{ background: cfg.bg, borderColor: cfg.border }}>
-      <div style={{ fontSize: 16, marginBottom: 4 }}>{cfg.icon}</div>
+      <div style={{ fontSize: 15, marginBottom: 4, color: cfg.color, fontWeight: 700 }}>{cfg.icon}</div>
       <div className="t-label" style={{ color: cfg.color }}>{label}</div>
     </div>
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Block({ title, accent, children }: { title: string; accent?: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <div className="t-label">{title}</div>
-        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
+        <div className="t-label" style={{ color: accent || 'var(--t3)' }}>{title}</div>
+        <div style={{ flex: 1, height: 1, background: 'var(--b1)' }} />
       </div>
       {children}
     </div>
   )
 }
 
-export function IdeaDetail({ idea, onBack, onBuildModel, onValidate, onRoadmap }: IdeaDetailProps) {
-  const flags = (idea.all_flags || []).map(f => [f, FLAG_META[f] || ['⚠️', f]] as const)
+export function IdeaDetail({ idea, onBack, onBuildModel, onValidate, onRoadmap }: Props) {
+  const flags = (idea.all_flags || []).map(f => [f, FLAGS[f] || ['⚠️', f]] as const)
 
   return (
     <div className="screen">
-
-      <button className="btn btn-ghost" onClick={onBack}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
-        <ChevronLeft size={16} />
-        <span>Все идеи</span>
+      <button className="btn btn-ghost" onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+        <ChevronLeft size={15} /><span>Все идеи</span>
       </button>
 
-      {/* Hero card */}
-      <div style={{
-        background: 'linear-gradient(135deg, var(--indigo-light), var(--bg))',
-        border: '1.5px solid var(--indigo-mid)',
-        borderRadius: 'var(--r-lg)',
-        padding: '20px',
-        marginBottom: 20,
-      }}>
+      {/* Hero */}
+      <div style={{ background: 'linear-gradient(135deg, rgba(170,255,62,0.06) 0%, var(--bg-card) 60%)', border: '1px solid rgba(170,255,62,0.15)', borderRadius: 'var(--r-lg)', padding: 18, marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 12,
-            background: 'var(--indigo)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
+          <div style={{ width: 50, height: 50, borderRadius: 12, background: 'var(--bg-2)', border: '1px solid var(--b2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <IdeaGlyph index={0} size={24} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', lineHeight: 1.2, marginBottom: 4 }}>
-              {idea.title}
-            </div>
+            <div className="t-card-title" style={{ fontSize: 18, marginBottom: 4 }}>{idea.title}</div>
             {idea.tagline && <div className="t-small">{idea.tagline}</div>}
           </div>
-          <ScoreRing score={idea.total_score || 0} size={56} />
+          <ScoreRing score={idea.total_score || 0} size={54} />
         </div>
       </div>
 
-      {/* Verdict row */}
+      {/* Verdicts */}
       <div className="verdict-row">
         <VerdictCard label="Финансы"  verdict={idea.financial_verdict || 'warn'} />
         <VerdictCard label="Рынок"    verdict={idea.market_verdict    || 'warn'} />
         <VerdictCard label="Операции" verdict={idea.ops_verdict       || 'warn'} />
       </div>
 
-      <div className="divider" />
+      <div className="divider divider-lime" />
 
       <div className="scroll-area">
+        <Block title="Суть бизнеса">
+          <div className="info-block"><p className="t-body">{idea.description}</p></div>
+        </Block>
 
-        <Section title="Суть бизнеса">
-          <div className="info-block">
-            <p className="t-body">{idea.description}</p>
+        <Block title="Почему вам подходит" accent="var(--lime)">
+          <div className="info-block info-block-lime">
+            <p className="t-body" style={{ color: 'var(--t1)' }}>{idea.why_for_you || idea.relevance_explanation}</p>
           </div>
-        </Section>
-
-        <Section title="Почему вам подходит">
-          <div className="info-block info-block-success">
-            <p className="t-body">{idea.why_for_you || idea.relevance_explanation}</p>
-          </div>
-        </Section>
+        </Block>
 
         {idea.unique_angle && (
-          <Section title="Как выделиться">
-            <div className="info-block" style={{ borderLeft: '3px solid var(--indigo)' }}>
+          <Block title="Как выделиться" accent="var(--teal)">
+            <div className="info-block" style={{ borderLeft: '2px solid var(--teal)', borderColor: 'rgba(0,229,204,0.3)' }}>
               <p className="t-body">{idea.unique_angle}</p>
             </div>
-          </Section>
+          </Block>
         )}
 
-        <Section title="Главный риск">
-          <div className="info-block info-block-risk">
+        <Block title="Главный риск" accent="var(--rose)">
+          <div className="info-block info-block-rose">
             <div style={{ display: 'flex', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>⚠️</span>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
               <p className="t-body" style={{ color: 'var(--rose)' }}>{idea.main_risk}</p>
             </div>
           </div>
-        </Section>
+        </Block>
 
-        <Section title="Ключ к успеху">
-          <div className="info-block">
+        <Block title="Ключ к успеху" accent="var(--amber)">
+          <div className="info-block info-block-amber">
             <div style={{ display: 'flex', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>🔑</span>
-              <p className="t-body">{idea.success_factor}</p>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>🔑</span>
+              <p className="t-body" style={{ color: 'var(--amber)' }}>{idea.success_factor}</p>
             </div>
           </div>
-        </Section>
+        </Block>
 
         {flags.length > 0 && (
-          <Section title={`Флаги риска · ${flags.length}`}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <Block title={`Флаги риска · ${flags.length}`} accent="var(--amber)">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
               {flags.map(([f, [emoji, label]]) => (
-                <span key={f} className="badge badge-amber">
-                  {emoji} {label}
-                </span>
+                <span key={f} className="badge badge-amber">{emoji} {label}</span>
               ))}
             </div>
-          </Section>
+          </Block>
         )}
 
         {(idea.market_analogues || []).length > 0 && (
-          <Section title="Примеры на рынке">
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <Block title="Примеры на рынке">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
               {idea.market_analogues.map(a => (
                 <span key={a} className="badge badge-neutral">🏢 {a}</span>
               ))}
             </div>
-          </Section>
+          </Block>
         )}
-
         <div style={{ height: 100 }} />
       </div>
 
-      {/* Sticky CTA */}
       <div className="sticky-footer">
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-outline btn-sm" onClick={onValidate}>
-            ✅ Валидация
-          </button>
-          <button className="btn btn-outline btn-sm" onClick={onBuildModel}>
-            📊 Финмодель
-          </button>
-          <button className="btn btn-primary" onClick={onRoadmap}>
-            🗺 Роадмап
-            <ArrowRight size={16} />
-          </button>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <button className="btn btn-outline btn-sm" onClick={onValidate} style={{ flex: 1 }}>✅ Валидация</button>
+          <button className="btn btn-outline btn-sm" onClick={onRoadmap}  style={{ flex: 1 }}>🗺️ Роадмап</button>
         </div>
+        <button className="btn btn-primary" onClick={onBuildModel}>
+          📊 Финансовая модель <ArrowRight size={15} />
+        </button>
       </div>
     </div>
   )
