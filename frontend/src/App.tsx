@@ -15,12 +15,13 @@ import { RoadmapScreen }        from './components/Roadmap'
 type Screen = AppScreen | 'validation' | 'roadmap'
 
 export default function App() {
-  const [screen, setScreen]     = useState<Screen>('splash')
-  const [authLoading, setAuth]  = useState(false)
-  const [error, setError]       = useState('')
-  const [sessionId, setSid]     = useState('')
-  const [ideas, setIdeas]       = useState<IdeaCard[]>([])
-  const [idea, setIdea]         = useState<IdeaCard | null>(null)
+  const [screen, setScreen]         = useState<Screen>('splash')
+  const [authLoading, setAuth]      = useState(false)
+  const [error, setError]           = useState('')
+  const [sessionId, setSid]         = useState('')
+  const [ideas, setIdeas]           = useState<IdeaCard[]>([])
+  const [idea, setIdea]             = useState<IdeaCard | null>(null)
+  const [savedProfile, setProfile]  = useState<UserProfile | null>(null)
 
   useEffect(() => { tgReady(); if (getToken()) setScreen('onboarding') }, [])
 
@@ -38,6 +39,17 @@ export default function App() {
     setError('')
     try {
       await saveProfile(profile)
+      setProfile(profile)
+      const gen = await generateIdeas()
+      setSid(gen.session_id)
+      setScreen('generating')
+    } catch (e: unknown) { setError((e as Error).message) }
+  }
+
+  async function handleRegenerate() {
+    if (!savedProfile) { setScreen('onboarding'); return }
+    setError('')
+    try {
       const gen = await generateIdeas()
       setSid(gen.session_id)
       setScreen('generating')
@@ -55,7 +67,9 @@ export default function App() {
       )}
       {screen === 'ideas'       && (
         <IdeasList ideas={ideas}
-          onSelect={i => { setIdea(i); setScreen('idea_detail') }} />
+          onSelect={i => { setIdea(i); setScreen('idea_detail') }}
+          onRegenerate={handleRegenerate}
+          onEditProfile={() => setScreen('onboarding')} />
       )}
       {screen === 'idea_detail' && idea && (
         <IdeaDetail idea={idea}
