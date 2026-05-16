@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { UserProfile } from '../types'
-import { NexusLogo, ArrowRight } from './Icons'
+import { NexusLogoMark, ArrowRight } from './Icons'
 
 interface OnboardingProps { onComplete: (p: UserProfile) => void }
 
@@ -36,15 +36,20 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       {/* Header */}
       <div className="top-bar">
         <div>
-          <div className="t-label" style={{ marginBottom: 4, color: 'var(--lime)' }}>Шаг {step} из 2</div>
+          <div className="t-label" style={{ marginBottom: 5, color: 'var(--cyan)' }}>Шаг {step} из 2</div>
           <div className="t-title">{step === 1 ? 'Ваш профиль' : 'Детали'}</div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-          <NexusLogo size={32} />
-          {/* Step dots */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+          <NexusLogoMark size={34} />
           <div style={{ display: 'flex', gap: 5 }}>
             {[1, 2].map(i => (
-              <div key={i} style={{ height: 3, borderRadius: 100, background: step >= i ? 'var(--lime)' : 'var(--b2)', width: step === i ? 20 : 8, transition: 'all 0.3s var(--ease)', boxShadow: step === i ? '0 0 8px rgba(170,255,62,0.5)' : 'none' }} />
+              <div key={i} style={{
+                height: 3, borderRadius: 100,
+                background: step >= i ? 'var(--cyan)' : 'var(--b2)',
+                width: step === i ? 22 : 8,
+                transition: 'all 0.3s var(--ease)',
+                boxShadow: step === i ? '0 0 10px rgba(0,245,233,0.55)' : 'none'
+              }} />
             ))}
           </div>
         </div>
@@ -109,10 +114,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
         {step === 2 && (
           <div style={{ animation: 'screenIn 0.3s var(--ease) both' }}>
-            {/* Tip */}
-            <div style={{ background: 'var(--lime-dim)', border: '1px solid rgba(170,255,62,0.2)', borderRadius: 'var(--r)', padding: '11px 14px', marginBottom: 20, display: 'flex', gap: 10 }}>
+            <div style={{
+              background: 'var(--cyan-dim)',
+              border: '1px solid rgba(0,245,233,0.2)',
+              borderRadius: 'var(--r)', padding: '12px 16px', marginBottom: 20,
+              display: 'flex', gap: 10
+            }}>
               <span style={{ fontSize: 16 }}>💡</span>
-              <div className="t-small" style={{ color: 'var(--lime)', lineHeight: 1.5 }}>
+              <div className="t-small" style={{ color: 'var(--cyan)', lineHeight: 1.6 }}>
                 Чем точнее детали — тем точнее идеи. Поля необязательные.
               </div>
             </div>
@@ -146,7 +155,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <Field label="Это основной доход?">
               <div className="chips">
                 <Chip label="✅ Да, основной" selected={p.is_main_income === true} onClick={() => set('is_main_income', true)} />
-                <Chip label="➕ Дополнительный доход" selected={p.is_main_income === false} onClick={() => set('is_main_income', false)} />
+                <Chip label="➕ Дополнительный" selected={p.is_main_income === false} onClick={() => set('is_main_income', false)} />
               </div>
             </Field>
 

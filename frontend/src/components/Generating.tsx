@@ -44,10 +44,10 @@ export function Generating({ sessionId, onDone, onError }: Props) {
         <GeneratingIllustration />
 
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--f)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--t1)', marginBottom: 6 }}>
-            NEXUS AI
+          <div style={{ fontFamily: 'var(--f)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--t1)', marginBottom: 6 }}>
+            <span className="holo-text">NEXUS AI</span>
           </div>
-          <div style={{ fontFamily: 'var(--f)', fontSize: 14, fontWeight: 600, color: 'var(--lime)', transition: 'opacity 0.3s' }}>
+          <div style={{ fontFamily: 'var(--f)', fontSize: 14, fontWeight: 600, color: 'var(--cyan)', transition: 'opacity 0.3s' }}>
             {step.label}…
           </div>
           <div className="t-small" style={{ marginTop: 4 }}>~30–60 секунд</div>
@@ -60,7 +60,7 @@ export function Generating({ sessionId, onDone, onError }: Props) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
             <div className="t-label">Обработка</div>
-            <div style={{ fontFamily: 'var(--fm)', fontSize: 11, color: 'var(--lime)' }}>{pct}%</div>
+            <div style={{ fontFamily: 'var(--fm)', fontSize: 11, color: 'var(--cyan)' }}>{pct}%</div>
           </div>
         </div>
 

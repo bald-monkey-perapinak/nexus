@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { IdeaCard, Contradiction } from '../types'
-import { IdeaGlyph, ScoreRing, ArrowRight, NexusLogo } from './Icons'
+import { IdeaGlyph, ScoreRing, ArrowRight, NexusLogoMark } from './Icons'
 
 interface Props {
   ideas: IdeaCard[]
@@ -12,8 +12,8 @@ interface Props {
 
 function VerdictRow({ fin, mkt, ops }: { fin: string; mkt: string; ops: string }) {
   function dot(v: string) {
-    const c = v === 'pass' ? 'var(--lime)' : v === 'warn' ? 'var(--amber)' : 'var(--rose)'
-    return <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: c, boxShadow: `0 0 6px ${c}60` }} />
+    const c = v === 'pass' ? 'var(--cyan)' : v === 'warn' ? 'var(--amber)' : 'var(--rose)'
+    return <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: c, boxShadow: `0 0 6px ${c}` }} />
   }
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -24,7 +24,7 @@ function VerdictRow({ fin, mkt, ops }: { fin: string; mkt: string; ops: string }
 }
 
 function DiffBadge({ d }: { d?: string }) {
-  if (d === 'easy')  return <span className="badge badge-lime">Лёгкий</span>
+  if (d === 'easy')  return <span className="badge badge-cyan">Лёгкий</span>
   if (d === 'hard')  return <span className="badge badge-rose">Сложный</span>
   return <span className="badge badge-neutral">Средний</span>
 }
@@ -41,7 +41,6 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
   const [showContradictions, setShowContradictions] = useState(true)
 
   const blockingCount = contradictions.filter(c => c.severity === 'blocking').length
-  const warningCount  = contradictions.filter(c => c.severity === 'warning').length
 
   async function handleRegenerate() {
     setMenuOpen(false)
@@ -54,19 +53,20 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
     <div className="screen">
       <div className="top-bar">
         <div>
-          <div className="t-label" style={{ marginBottom: 4, color: 'var(--lime)' }}>Результат анализа</div>
+          <div className="t-label" style={{ marginBottom: 5, color: 'var(--cyan)' }}>Результат анализа</div>
           <div className="t-title">{ideas.length} идей</div>
           <div className="t-small" style={{ marginTop: 2 }}>прошли через 3 AI‑фильтра</div>
         </div>
 
-        {/* Header actions */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
-          <NexusLogo size={34} />
+          <NexusLogoMark size={34} />
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setMenuOpen(v => !v)}
               style={{
-                background: 'var(--bg-card)', border: '1px solid var(--b2)',
+                background: 'var(--bg-card)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid var(--b2)',
                 borderRadius: 'var(--r-sm)', padding: '6px 12px',
                 fontFamily: 'var(--f)', fontSize: 11, fontWeight: 700,
                 color: 'var(--t3)', cursor: 'pointer', display: 'flex',
@@ -78,18 +78,15 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
 
             {menuOpen && (
               <>
-                {/* Backdrop */}
-                <div
-                  onClick={() => setMenuOpen(false)}
-                  style={{ position: 'fixed', inset: 0, zIndex: 10 }}
-                />
-                {/* Dropdown */}
+                <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
                 <div style={{
                   position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                  background: 'var(--bg-card)', border: '1px solid var(--b2)',
+                  background: 'rgba(8,13,26,0.95)',
+                  backdropFilter: 'blur(24px)',
+                  border: '1px solid var(--b2)',
                   borderRadius: 'var(--r)', padding: 6, zIndex: 20,
                   minWidth: 190,
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+                  boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,245,233,0.08)',
                   animation: 'screenIn 0.15s var(--ease)',
                 }}>
                   <button
@@ -99,10 +96,10 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
                       width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                       background: 'transparent', border: 'none', borderRadius: 7,
                       padding: '10px 12px', cursor: 'pointer', transition: 'background 0.13s',
-                      fontFamily: 'var(--f)', fontSize: 13, fontWeight: 600, color: 'var(--lime)',
+                      fontFamily: 'var(--f)', fontSize: 13, fontWeight: 600, color: 'var(--cyan)',
                       textAlign: 'left',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--lime-dim)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--cyan-dim)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <span style={{ fontSize: 16 }}>🔄</span>
@@ -123,7 +120,7 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
                       fontFamily: 'var(--f)', fontSize: 13, fontWeight: 600, color: 'var(--t2)',
                       textAlign: 'left',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-3)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-glass)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <span style={{ fontSize: 16 }}>✏️</span>
@@ -139,13 +136,13 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
         </div>
       </div>
 
-      <div className="divider divider-lime" style={{ marginBottom: 16 }} />
+      <div className="divider divider-cyan" style={{ marginBottom: 16 }} />
 
-      {/* Блок противоречий */}
+      {/* Contradictions block */}
       {contradictions.length > 0 && showContradictions && (
         <div style={{
           background: blockingCount > 0 ? 'var(--rose-dim)' : 'var(--amber-dim)',
-          border: `1px solid ${blockingCount > 0 ? 'rgba(255,77,106,0.3)' : 'rgba(255,184,0,0.3)'}`,
+          border: `1px solid ${blockingCount > 0 ? 'rgba(255,77,138,0.3)' : 'rgba(255,184,48,0.3)'}`,
           borderRadius: 'var(--r-lg)', padding: 14, marginBottom: 16,
           animation: 'screenIn 0.3s var(--ease)',
         }}>
@@ -154,48 +151,32 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
               <span style={{ fontSize: 18 }}>{blockingCount > 0 ? '⚠️' : '💡'}</span>
               <div>
                 <div style={{ fontFamily: 'var(--f)', fontSize: 13, fontWeight: 700, color: blockingCount > 0 ? 'var(--rose)' : 'var(--amber)' }}>
-                  {blockingCount > 0 ? 'Обнаружены противоречия в профиле' : 'Замечания по профилю'}
+                  {blockingCount > 0 ? 'Обнаружены противоречия' : 'Замечания по профилю'}
                 </div>
-                <div className="t-small" style={{ marginTop: 2 }}>
-                  Идеи учитывают это, но могут быть ограничения
-                </div>
+                <div className="t-small" style={{ marginTop: 2 }}>Идеи учитывают это, но могут быть ограничения</div>
               </div>
             </div>
-            <button onClick={() => setShowContradictions(false)} style={{
-              background: 'none', border: 'none', color: 'var(--t4)',
-              cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 2,
-            }}>×</button>
+            <button onClick={() => setShowContradictions(false)} style={{ background: 'none', border: 'none', color: 'var(--t4)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 2 }}>×</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {contradictions.map((c, i) => (
-              <div key={i} style={{
-                background: 'rgba(0,0,0,0.15)', borderRadius: 'var(--r-sm)',
-                padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start',
-              }}>
-                <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>
-                  {c.severity === 'blocking' ? '🔴' : '🟡'}
-                </span>
+              <div key={i} style={{ background: 'rgba(0,0,0,0.18)', borderRadius: 'var(--r-sm)', padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{c.severity === 'blocking' ? '🔴' : '🟡'}</span>
                 <div>
-                  <div style={{ fontFamily: 'var(--f)', fontSize: 11, fontWeight: 700,
-                    color: c.severity === 'blocking' ? 'var(--rose)' : 'var(--amber)',
-                    marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    {c.severity === 'blocking' ? 'Нереалистично' : 'Предупреждение'}
-                    {' · '}{c.field_a} × {c.field_b}
+                  <div style={{ fontFamily: 'var(--f)', fontSize: 11, fontWeight: 700, color: c.severity === 'blocking' ? 'var(--rose)' : 'var(--amber)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {c.severity === 'blocking' ? 'Нереалистично' : 'Предупреждение'} · {c.field_a} × {c.field_b}
                   </div>
-                  <div className="t-small" style={{ color: 'var(--t2)', lineHeight: 1.55 }}>
-                    {c.description}
-                  </div>
+                  <div className="t-small" style={{ color: 'var(--t2)', lineHeight: 1.55 }}>{c.description}</div>
                 </div>
               </div>
             ))}
           </div>
           <button onClick={() => { setShowContradictions(false); onEditProfile() }} style={{
             marginTop: 10, background: 'transparent',
-            border: `1px solid ${blockingCount > 0 ? 'rgba(255,77,106,0.4)' : 'rgba(255,184,0,0.4)'}`,
+            border: `1px solid ${blockingCount > 0 ? 'rgba(255,77,138,0.4)' : 'rgba(255,184,48,0.4)'}`,
             borderRadius: 'var(--r-sm)', padding: '7px 14px', width: '100%',
             fontFamily: 'var(--f)', fontSize: 12, fontWeight: 700,
-            color: blockingCount > 0 ? 'var(--rose)' : 'var(--amber)',
-            cursor: 'pointer',
+            color: blockingCount > 0 ? 'var(--rose)' : 'var(--amber)', cursor: 'pointer',
           }}>
             ✏️ Скорректировать профиль
           </button>
@@ -208,9 +189,8 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
             <div key={idea.id} className="card" onClick={() => onSelect(idea)}
               style={{ animationDelay: `${i * 0.06}s`, animation: 'screenIn 0.4s var(--ease) both' }}>
 
-              {/* Top row */}
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--bg-2)', border: '1px solid var(--b2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 11, background: 'rgba(0,245,233,0.06)', border: '1px solid rgba(0,245,233,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <IdeaGlyph index={i} size={22} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -241,7 +221,9 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
         {/* Bottom regenerate nudge */}
         <div style={{
           margin: '20px 0 8px', padding: '14px 16px',
-          background: 'var(--bg-card)', border: '1px solid var(--b2)',
+          background: 'var(--bg-card)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid var(--b2)',
           borderRadius: 'var(--r-lg)', display: 'flex',
           alignItems: 'center', justifyContent: 'space-between', gap: 12,
         }}>
@@ -255,10 +237,10 @@ export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEdi
             onClick={handleRegenerate}
             disabled={regenerating}
             style={{
-              background: 'var(--lime-dim)', border: '1px solid rgba(170,255,62,0.3)',
+              background: 'var(--cyan-dim)', border: '1px solid rgba(0,245,233,0.3)',
               borderRadius: 'var(--r-sm)', padding: '8px 14px',
               fontFamily: 'var(--f)', fontSize: 12, fontWeight: 700,
-              color: 'var(--lime)', cursor: 'pointer', flexShrink: 0,
+              color: 'var(--cyan)', cursor: 'pointer', flexShrink: 0,
               transition: 'all 0.15s', whiteSpace: 'nowrap',
             }}
           >
