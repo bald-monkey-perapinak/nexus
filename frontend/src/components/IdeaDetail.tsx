@@ -73,10 +73,11 @@ export function IdeaDetail({ idea, onBack, onBuildModel, onValidate, onRoadmap }
       </div>
 
       {/* Verdicts */}
-      <div className="verdict-row">
+      <div className="verdict-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <VerdictCard label="Финансы"  verdict={idea.financial_verdict || 'warn'} />
         <VerdictCard label="Рынок"    verdict={idea.market_verdict    || 'warn'} />
         <VerdictCard label="Операции" verdict={idea.ops_verdict       || 'warn'} />
+        <VerdictCard label="Локация"  verdict={idea.location_verdict  || 'pass'} />
       </div>
 
       <div className="divider divider-lime" />
@@ -117,6 +118,16 @@ export function IdeaDetail({ idea, onBack, onBuildModel, onValidate, onRoadmap }
             </div>
           </div>
         </Block>
+
+        {(idea.realism_warnings || []).length > 0 && (
+          <Block title="Предупреждения AI-аналитика" accent="var(--amber)">
+            {idea.realism_warnings!.map((w, i) => (
+              <div key={i} className="warn-banner" style={{ marginBottom: 7 }}>
+                <span>🤖</span><span>{w}</span>
+              </div>
+            ))}
+          </Block>
+        )}
 
         {flags.length > 0 && (
           <Block title={`Флаги риска · ${flags.length}`} accent="var(--amber)">

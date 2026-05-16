@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import type { IdeaCard } from '../types'
+import type { IdeaCard, Contradiction } from '../types'
 import { IdeaGlyph, ScoreRing, ArrowRight, NexusLogo } from './Icons'
 
 interface Props {
   ideas: IdeaCard[]
+  contradictions: Contradiction[]
   onSelect: (idea: IdeaCard) => void
   onRegenerate: () => void
   onEditProfile: () => void
@@ -34,9 +35,13 @@ function TrendBadge({ t }: { t?: string }) {
   return <span className="badge badge-neutral">→ Стабильно</span>
 }
 
-export function IdeasList({ ideas, onSelect, onRegenerate, onEditProfile }: Props) {
+export function IdeasList({ ideas, contradictions, onSelect, onRegenerate, onEditProfile }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
+  const [showContradictions, setShowContradictions] = useState(true)
+
+  const blockingCount = contradictions.filter(c => c.severity === 'blocking').length
+  const warningCount  = contradictions.filter(c => c.severity === 'warning').length
 
   async function handleRegenerate() {
     setMenuOpen(false)
@@ -135,6 +140,67 @@ export function IdeasList({ ideas, onSelect, onRegenerate, onEditProfile }: Prop
       </div>
 
       <div className="divider divider-lime" style={{ marginBottom: 16 }} />
+
+      {/* Блок противоречий */}
+      {contradictions.length > 0 && showContradictions && (
+        <div style={{
+          background: blockingCount > 0 ? 'var(--rose-dim)' : 'var(--amber-dim)',
+          border: `1px solid ${blockingCount > 0 ? 'rgba(255,77,106,0.3)' : 'rgba(255,184,0,0.3)'}`,
+          borderRadius: 'var(--r-lg)', padding: 14, marginBottom: 16,
+          animation: 'screenIn 0.3s var(--ease)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 18 }}>{blockingCount > 0 ? '⚠️' : '💡'}</span>
+              <div>
+                <div style={{ fontFamily: 'var(--f)', fontSize: 13, fontWeight: 700, color: blockingCount > 0 ? 'var(--rose)' : 'var(--amber)' }}>
+                  {blockingCount > 0 ? 'Обнаружены противоречия в профиле' : 'Замечания по профилю'}
+                </div>
+                <div className="t-small" style={{ marginTop: 2 }}>
+                  Идеи учитывают это, но могут быть ограничения
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setShowContradictions(false)} style={{
+              background: 'none', border: 'none', color: 'var(--t4)',
+              cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 2,
+            }}>×</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {contradictions.map((c, i) => (
+              <div key={i} style={{
+                background: 'rgba(0,0,0,0.15)', borderRadius: 'var(--r-sm)',
+                padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start',
+              }}>
+                <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>
+                  {c.severity === 'blocking' ? '🔴' : '🟡'}
+                </span>
+                <div>
+                  <div style={{ fontFamily: 'var(--f)', fontSize: 11, fontWeight: 700,
+                    color: c.severity === 'blocking' ? 'var(--rose)' : 'var(--amber)',
+                    marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {c.severity === 'blocking' ? 'Нереалистично' : 'Предупреждение'}
+                    {' · '}{c.field_a} × {c.field_b}
+                  </div>
+                  <div className="t-small" style={{ color: 'var(--t2)', lineHeight: 1.55 }}>
+                    {c.description}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => { setShowContradictions(false); onEditProfile() }} style={{
+            marginTop: 10, background: 'transparent',
+            border: `1px solid ${blockingCount > 0 ? 'rgba(255,77,106,0.4)' : 'rgba(255,184,0,0.4)'}`,
+            borderRadius: 'var(--r-sm)', padding: '7px 14px', width: '100%',
+            fontFamily: 'var(--f)', fontSize: 12, fontWeight: 700,
+            color: blockingCount > 0 ? 'var(--rose)' : 'var(--amber)',
+            cursor: 'pointer',
+          }}>
+            ✏️ Скорректировать профиль
+          </button>
+        </div>
+      )}
 
       <div className="scroll-area">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

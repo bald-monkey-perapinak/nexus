@@ -51,12 +51,15 @@ async def _run_generation_task(user_id: str, session_id: str, profile: dict):
         try:
             result = await run_idea_generation(user_id, session_id, profile)
             ideas = result.get("idea_candidates", [])
-            all_flags = result.get("all_flags", [])
+            contradictions = result.get("contradictions", [])
+            generation_warnings = result.get("generation_warnings", [])
             errors = result.get("errors", [])
 
             rec = await db.get(GenerationSession, uuid.UUID(session_id))
             if rec:
                 rec.idea_candidates = ideas
+                rec.contradictions = contradictions
+                rec.generation_warnings = generation_warnings
                 rec.status = "error" if errors and not ideas else "done"
                 rec.error_message = "; ".join(errors) if errors else None
                 await db.commit()
@@ -83,6 +86,8 @@ async def get_session_status(
         "session_id": session_id,
         "status": session.status,
         "ideas": session.idea_candidates or [],
+        "contradictions": session.contradictions or [],
+        "generation_warnings": session.generation_warnings or [],
         "error": session.error_message,
     }
 

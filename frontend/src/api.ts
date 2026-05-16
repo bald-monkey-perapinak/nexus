@@ -44,9 +44,14 @@ export const generateIdeas = () =>
   request<{ session_id: string; status: string }>('/ideas/generate', { method: 'POST' })
 
 export const getSessionStatus = (sessionId: string) =>
-  request<{ session_id: string; status: string; ideas: any[]; error: string | null }>(
-    `/ideas/session/${sessionId}`
-  )
+  request<{
+    session_id: string
+    status: string
+    ideas: any[]
+    contradictions: any[]
+    generation_warnings: string[]
+    error: string | null
+  }>(`/ideas/session/${sessionId}`)
 
 export const selectIdea = (sessionId: string, ideaId: string) =>
   request<{ ok: boolean }>(`/ideas/session/${sessionId}/select/${ideaId}`, { method: 'POST' })

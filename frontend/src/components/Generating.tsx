@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { getSessionStatus } from '../api'
-import type { IdeaCard } from '../types'
-import { GeneratingIllustration, NexusLogo } from './Icons'
+import type { IdeaCard, Contradiction } from '../types'
+import { GeneratingIllustration } from './Icons'
 
-interface Props { sessionId: string; onDone: (ideas: IdeaCard[]) => void; onError: (msg: string) => void }
+interface Props {
+  sessionId: string
+  onDone: (ideas: IdeaCard[], contradictions: Contradiction[]) => void
+  onError: (msg: string) => void
+}
 
 const STEPS = [
   { label: 'Анализируем профиль',  pct: 8  },
@@ -23,7 +27,7 @@ export function Generating({ sessionId, onDone, onError }: Props) {
     const timer = setInterval(async () => {
       try {
         const s = await getSessionStatus(sessionId)
-        if (s.status === 'done')  { clearInterval(timer); onDone(s.ideas as IdeaCard[]) }
+        if (s.status === 'done')  { clearInterval(timer); onDone(s.ideas as IdeaCard[], s.contradictions as Contradiction[]) }
         if (s.status === 'error') { clearInterval(timer); onError(s.error || 'Ошибка') }
       } catch { /* silent */ }
       setIdx(i => { const n = Math.min(i + 1, STEPS.length - 1); setPct(STEPS[n].pct); return n })

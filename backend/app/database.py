@@ -42,6 +42,8 @@ class GenerationSession(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     profile_snapshot = Column(JSON, nullable=False, default=dict)
     idea_candidates = Column(JSON, nullable=True)
+    contradictions = Column(JSON, nullable=True, default=list)
+    generation_warnings = Column(JSON, nullable=True, default=list)
     selected_idea_id = Column(String(50), nullable=True)
     status = Column(String(50), default="pending")  # pending | generating | done | error
     error_message = Column(Text, nullable=True)

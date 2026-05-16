@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { authTelegram, saveProfile, generateIdeas, setToken, getToken } from './api'
 import { getTelegramInitData, tgReady } from './telegram'
-import type { AppScreen, IdeaCard, UserProfile } from './types'
+import type { AppScreen, IdeaCard, UserProfile, Contradiction } from './types'
 
 import { Splash }               from './components/Splash'
 import { Onboarding }           from './components/Onboarding'
@@ -21,7 +21,8 @@ export default function App() {
   const [sessionId, setSid]         = useState('')
   const [ideas, setIdeas]           = useState<IdeaCard[]>([])
   const [idea, setIdea]             = useState<IdeaCard | null>(null)
-  const [savedProfile, setProfile]  = useState<UserProfile | null>(null)
+  const [savedProfile, setProfile]          = useState<UserProfile | null>(null)
+  const [contradictions, setContradictions] = useState<Contradiction[]>([])
 
   useEffect(() => { tgReady(); if (getToken()) setScreen('onboarding') }, [])
 
@@ -62,11 +63,16 @@ export default function App() {
       {screen === 'onboarding'  && <Onboarding onComplete={handleProfile} />}
       {screen === 'generating'  && (
         <Generating sessionId={sessionId}
-          onDone={list => { setIdeas(list); setScreen('ideas') }}
+          onDone={(list, contradicts) => {
+            setIdeas(list)
+            setContradictions(contradicts)
+            setScreen('ideas')
+          }}
           onError={msg  => { setError(msg); setScreen('splash') }} />
       )}
       {screen === 'ideas'       && (
         <IdeasList ideas={ideas}
+          contradictions={contradictions}
           onSelect={i => { setIdea(i); setScreen('idea_detail') }}
           onRegenerate={handleRegenerate}
           onEditProfile={() => setScreen('onboarding')} />

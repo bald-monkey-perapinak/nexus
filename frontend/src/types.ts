@@ -1,3 +1,10 @@
+export interface Contradiction {
+  field_a: string
+  field_b: string
+  description: string
+  severity: 'blocking' | 'warning'
+}
+
 export interface UserProfile {
   capital_range: string
   format: string
@@ -34,9 +41,15 @@ export interface IdeaCard {
   unique_angle?: string
   total_score: number
   all_flags: string[]
+  realism_warnings?: string[]
   financial_verdict: string
   market_verdict: string
   ops_verdict: string
+  location_verdict?: string
+  financial_score?: number
+  market_score?: number
+  ops_score?: number
+  location_score?: number
 }
 
 export interface FinancialScenario {
