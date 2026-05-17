@@ -281,9 +281,9 @@ docker compose logs -f backend
 
 | Сервис | URL |
 |--------|-----|
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
-| API Docs | http://localhost:8000/docs |
+| Frontend | http://localhost:4000 |
+| Backend API | http://localhost:8001 |
+| API Docs | http://localhost:8001/docs |
 
 ### 4 · Локальная разработка (без Docker)
 
@@ -296,7 +296,7 @@ uvicorn app.main:app --reload --port 8000
 # Frontend (новый терминал)
 cd frontend
 npm install
-npm run dev           # → http://localhost:5173
+npm run dev           # → http://localhost:5173 (dev server Vite)
 
 # Bot (новый терминал)
 cd bot
@@ -307,8 +307,11 @@ python bot.py
 ### 5 · Подключение к Telegram
 
 ```bash
-# Пробросить порт наружу
+# Пробросить dev-сервер фронта наружу (для локальной разработки с ngrok)
 ngrok http 5173
+
+# Или, если используете Docker — пробросить контейнер фронта
+ngrok http 4000
 
 # Скопировать HTTPS-URL в .env → WEBAPP_URL
 # Перезапустить бот
