@@ -2,10 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import init_db
-from app.routers import auth, profile, ideas, financial, validation, roadmap, analytics
+from app.routers import auth, profile, ideas, financial, validation, roadmap
+from app.config import settings
 import structlog
 
 log = structlog.get_logger()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,9 +16,24 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Nexus API", version="0.4.0", lifespan=lifespan)
+
+# CORS — разрешаем Vercel домен и localhost для разработки
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://*.vercel.app",
+]
+# Если задан явный FRONTEND_URL — добавляем
+if settings.FRONTEND_URL:
+    origins.append(settings.FRONTEND_URL)
+
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"],
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",   # все preview-деплои
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth.router)
@@ -25,7 +42,7 @@ app.include_router(ideas.router)
 app.include_router(financial.router)
 app.include_router(validation.router)
 app.include_router(roadmap.router)
-app.include_router(analytics.router)
+
 
 @app.get("/api/health")
 async def health():

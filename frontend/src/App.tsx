@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { authLogin, authRegister, saveProfile, generateIdeas, setToken, getToken } from './api'
+import { authTelegram, authGuest, saveProfile, generateIdeas, setToken, getToken } from './api'
 import type { AppScreen, IdeaCard, UserProfile, Contradiction } from './types'
 
-import { Login }                from './components/Login'
+import { Splash }               from './components/Splash'
 import { Onboarding }           from './components/Onboarding'
 import { Generating }           from './components/Generating'
 import { IdeasList }            from './components/IdeasList'
@@ -10,41 +10,60 @@ import { IdeaDetail }           from './components/IdeaDetail'
 import { FinancialModelScreen } from './components/FinancialModel'
 import { ValidationScreen }     from './components/Validation'
 import { RoadmapScreen }        from './components/Roadmap'
-import { AnalyticsScreen }      from './components/Analytics'
 
-type Screen = AppScreen | 'validation' | 'roadmap' | 'login' | 'register'
+type Screen = AppScreen | 'validation' | 'roadmap'
+
+/** Определяем, запущено ли приложение внутри Telegram WebApp */
+function isTelegramEnv(): boolean {
+  return !!(window.Telegram?.WebApp?.initData)
+}
 
 export default function App() {
-  const [screen, setScreen]         = useState<Screen>('login')
-  const [authLoading, setAuth]      = useState(false)
-  const [error, setError]           = useState('')
-  const [sessionId, setSid]         = useState('')
-  const [ideas, setIdeas]           = useState<IdeaCard[]>([])
-  const [idea, setIdea]             = useState<IdeaCard | null>(null)
-  const [savedProfile, setProfile]          = useState<UserProfile | null>(null)
+  const [screen, setScreen]               = useState<Screen>('splash')
+  const [authLoading, setAuthLoading]     = useState(false)
+  const [error, setError]                 = useState('')
+  const [sessionId, setSid]               = useState('')
+  const [ideas, setIdeas]                 = useState<IdeaCard[]>([])
+  const [idea, setIdea]                   = useState<IdeaCard | null>(null)
+  const [savedProfile, setProfile]        = useState<UserProfile | null>(null)
   const [contradictions, setContradictions] = useState<Contradiction[]>([])
 
-  useEffect(() => { if (getToken()) setScreen('onboarding') }, [])
+  // При наличии токена сразу пропускаем сплэш
+  useEffect(() => {
+    // Telegram: развернуть на весь экран
+    window.Telegram?.WebApp?.ready()
+    window.Telegram?.WebApp?.expand()
 
-  async function handleLogin(email: string, password: string) {
-    setAuth(true); setError('')
+    if (getToken()) {
+      setScreen('onboarding')
+    }
+  }, [])
+
+  // ── Старт: авторизация ─────────────────────────────────────────────
+
+  async function handleStart() {
+    setAuthLoading(true)
+    setError('')
     try {
-      const auth = await authLogin(email, password)
+      let auth
+      if (isTelegramEnv()) {
+        // Внутри Telegram Mini App
+        const initData = window.Telegram!.WebApp!.initData
+        auth = await authTelegram(initData)
+      } else {
+        // Обычный браузер — гостевой вход
+        auth = await authGuest()
+      }
       setToken(auth.access_token)
       setScreen('onboarding')
-    } catch (e: unknown) { setError((e as Error).message) }
-    finally { setAuth(false) }
+    } catch (e: unknown) {
+      setError((e as Error).message)
+    } finally {
+      setAuthLoading(false)
+    }
   }
 
-  async function handleRegister(email: string, password: string, fullName: string) {
-    setAuth(true); setError('')
-    try {
-      const auth = await authRegister(email, password, fullName)
-      setToken(auth.access_token)
-      setScreen('onboarding')
-    } catch (e: unknown) { setError((e as Error).message) }
-    finally { setAuth(false) }
-  }
+  // ── Профиль ────────────────────────────────────────────────────────
 
   async function handleProfile(profile: UserProfile) {
     setError('')
@@ -54,7 +73,9 @@ export default function App() {
       const gen = await generateIdeas()
       setSid(gen.session_id)
       setScreen('generating')
-    } catch (e: unknown) { setError((e as Error).message) }
+    } catch (e: unknown) {
+      setError((e as Error).message)
+    }
   }
 
   async function handleRegenerate() {
@@ -64,56 +85,80 @@ export default function App() {
       const gen = await generateIdeas()
       setSid(gen.session_id)
       setScreen('generating')
-    } catch (e: unknown) { setError((e as Error).message) }
+    } catch (e: unknown) {
+      setError((e as Error).message)
+    }
   }
+
+  // ── Render ─────────────────────────────────────────────────────────
 
   return (
     <>
-      {screen === 'login'       && <Login onLogin={handleLogin} onSwitchRegister={() => setScreen('register')} loading={authLoading} />}
-      {screen === 'register'    && <Login isRegister onRegister={handleRegister} onSwitchLogin={() => setScreen('login')} loading={authLoading} />}
-      {screen === 'onboarding'  && <Onboarding onComplete={handleProfile} />}
-      {screen === 'generating'  && (
-        <Generating sessionId={sessionId}
+      {screen === 'splash' && (
+        <Splash onStart={handleStart} loading={authLoading} />
+      )}
+
+      {screen === 'onboarding' && (
+        <Onboarding onComplete={handleProfile} />
+      )}
+
+      {screen === 'generating' && (
+        <Generating
+          sessionId={sessionId}
           onDone={(list, contradicts) => {
             setIdeas(list)
             setContradictions(contradicts)
             setScreen('ideas')
           }}
-          onError={msg  => { setError(msg); setScreen('login') }} />
+          onError={msg => { setError(msg); setScreen('splash') }}
+        />
       )}
-      {screen === 'ideas'       && (
-        <IdeasList ideas={ideas}
+
+      {screen === 'ideas' && (
+        <IdeasList
+          ideas={ideas}
           contradictions={contradictions}
           onSelect={i => { setIdea(i); setScreen('idea_detail') }}
           onRegenerate={handleRegenerate}
-          onEditProfile={() => setScreen('onboarding')} />
+          onEditProfile={() => setScreen('onboarding')}
+        />
       )}
+
       {screen === 'idea_detail' && idea && (
-        <IdeaDetail idea={idea}
+        <IdeaDetail
+          idea={idea}
           onBack={() => setScreen('ideas')}
           onBuildModel={() => setScreen('financial')}
           onValidate={() => setScreen('validation')}
           onRoadmap={() => setScreen('roadmap')}
-          onAnalytics={() => setScreen('analytics')} />
+          onAnalytics={() => setScreen('dashboard')}
+        />
       )}
-      {screen === 'financial'  && idea && (
-        <FinancialModelScreen idea={idea} sessionId={sessionId} onBack={() => setScreen('idea_detail')} />
+
+      {screen === 'financial' && idea && (
+        <FinancialModelScreen
+          idea={idea}
+          sessionId={sessionId}
+          onBack={() => setScreen('idea_detail')}
+        />
       )}
+
       {screen === 'validation' && idea && (
-        <ValidationScreen ideaId={idea.id} sessionId={sessionId}
-          ideaTitle={idea.title} onBack={() => setScreen('idea_detail')} />
-      )}
-      {screen === 'analytics'  && idea && (
-        <AnalyticsScreen
+        <ValidationScreen
           ideaId={idea.id}
           sessionId={sessionId}
           ideaTitle={idea.title}
-          isOnline={(idea as any).format === 'online'}
-          onBack={() => setScreen('idea_detail')} />
+          onBack={() => setScreen('idea_detail')}
+        />
       )}
-      {screen === 'roadmap'    && idea && (
-        <RoadmapScreen ideaId={idea.id} sessionId={sessionId}
-          ideaTitle={idea.title} onBack={() => setScreen('idea_detail')} />
+
+      {screen === 'roadmap' && idea && (
+        <RoadmapScreen
+          ideaId={idea.id}
+          sessionId={sessionId}
+          ideaTitle={idea.title}
+          onBack={() => setScreen('idea_detail')}
+        />
       )}
 
       {error && (
