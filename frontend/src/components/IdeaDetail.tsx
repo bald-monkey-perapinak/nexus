@@ -3,7 +3,7 @@ import { IdeaGlyph, ScoreRing, ArrowRight, ChevronLeft } from './Icons'
 
 interface Props {
   idea: IdeaCard; onBack: () => void
-  onBuildModel: () => void; onValidate: () => void; onRoadmap: () => void
+  onBuildModel: () => void; onValidate: () => void; onRoadmap: () => void; onAnalytics: () => void
 }
 
 const FLAGS: Record<string, [string, string]> = {
@@ -49,7 +49,7 @@ function Block({ title, accent, children }: { title: string; accent?: string; ch
   )
 }
 
-export function IdeaDetail({ idea, onBack, onBuildModel, onValidate, onRoadmap }: Props) {
+export function IdeaDetail({ idea, onBack, onBuildModel, onValidate, onRoadmap, onAnalytics }: Props) {
   const flags = (idea.all_flags || []).map(f => [f, FLAGS[f] || ['⚠️', f]] as const)
 
   return (
@@ -153,8 +153,9 @@ export function IdeaDetail({ idea, onBack, onBuildModel, onValidate, onRoadmap }
 
       <div className="sticky-footer">
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <button className="btn btn-outline btn-sm" onClick={onValidate} style={{ flex: 1 }}>✅ Валидация</button>
-          <button className="btn btn-outline btn-sm" onClick={onRoadmap}  style={{ flex: 1 }}>🗺️ Роадмап</button>
+          <button className="btn btn-outline btn-sm" onClick={onAnalytics} style={{ flex: 1 }}>🔍 Рынок</button>
+          <button className="btn btn-outline btn-sm" onClick={onValidate}  style={{ flex: 1 }}>✅ Валидация</button>
+          <button className="btn btn-outline btn-sm" onClick={onRoadmap}   style={{ flex: 1 }}>🗺️ Роадмап</button>
         </div>
         <button className="btn btn-primary" onClick={onBuildModel}>
           📊 Финансовая модель <ArrowRight size={15} />

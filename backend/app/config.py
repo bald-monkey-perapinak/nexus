@@ -31,6 +31,9 @@ class Settings(BaseSettings):
             return []
         return [x.strip() for x in self.ADMIN_EMAILS.split(",") if x.strip()]
 
+    # Tavily web search
+    TAVILY_API_KEY: str = ""
+
     class Config:
         env_file = ".env"
 

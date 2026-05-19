@@ -10,6 +10,7 @@ import { IdeaDetail }           from './components/IdeaDetail'
 import { FinancialModelScreen } from './components/FinancialModel'
 import { ValidationScreen }     from './components/Validation'
 import { RoadmapScreen }        from './components/Roadmap'
+import { AnalyticsScreen }      from './components/Analytics'
 
 type Screen = AppScreen | 'validation' | 'roadmap' | 'login' | 'register'
 
@@ -92,7 +93,8 @@ export default function App() {
           onBack={() => setScreen('ideas')}
           onBuildModel={() => setScreen('financial')}
           onValidate={() => setScreen('validation')}
-          onRoadmap={() => setScreen('roadmap')} />
+          onRoadmap={() => setScreen('roadmap')}
+          onAnalytics={() => setScreen('analytics')} />
       )}
       {screen === 'financial'  && idea && (
         <FinancialModelScreen idea={idea} sessionId={sessionId} onBack={() => setScreen('idea_detail')} />
@@ -100,6 +102,14 @@ export default function App() {
       {screen === 'validation' && idea && (
         <ValidationScreen ideaId={idea.id} sessionId={sessionId}
           ideaTitle={idea.title} onBack={() => setScreen('idea_detail')} />
+      )}
+      {screen === 'analytics'  && idea && (
+        <AnalyticsScreen
+          ideaId={idea.id}
+          sessionId={sessionId}
+          ideaTitle={idea.title}
+          isOnline={(idea as any).format === 'online'}
+          onBack={() => setScreen('idea_detail')} />
       )}
       {screen === 'roadmap'    && idea && (
         <RoadmapScreen ideaId={idea.id} sessionId={sessionId}
