@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 import uuid
 from app.config import settings
 
-engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG)
+engine = create_async_engine(settings.async_database_url, echo=settings.DEBUG)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
