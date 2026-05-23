@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.database import init_db
+from app.database import init_db, _get_engine
 from app.routers import auth, profile, ideas, financial, validation, roadmap
 from app.config import settings
 import asyncio
 import structlog
+from sqlalchemy import text
 
 log = structlog.get_logger()
 
@@ -32,11 +33,12 @@ async def _init_db_background() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    log.info("Starting Nexus API", version="0.4.0")
+    log.info("Starting Nexus API", version="0.4.0", host="0.0.0.0", port=8000)
     # Fire-and-forget: schedule DB init as a background task so the app
     # becomes ready to serve requests (health checks, etc.) immediately.
     asyncio.create_task(_init_db_background())
     yield
+    log.info("Nexus API shutdown complete")
 
 app = FastAPI(title="Nexus API", version="0.4.0", lifespan=lifespan)
 
@@ -69,4 +71,20 @@ app.include_router(roadmap.router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "0.4.0"}
+    """Liveness + shallow readiness probe.
+
+    Always returns 200 so Railway's health check never kills a running
+    process just because the database is temporarily unreachable.
+    The ``db`` field lets you distinguish a healthy app from one that
+    cannot reach its database without causing a restart loop.
+    """
+    db_status = "unknown"
+    try:
+        engine = _get_engine()
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        db_status = "ok"
+    except Exception as exc:
+        db_status = f"error: {exc}"
+
+    return {"status": "ok", "version": "0.4.0", "db": db_status}
