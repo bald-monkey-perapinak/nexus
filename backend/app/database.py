@@ -118,4 +118,8 @@ async def init_db():
     async with _get_engine().begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-async_session_maker = _get_session_maker
+def get_async_session_maker():
+    """Returns the async_sessionmaker instance."""
+    return _get_session_maker()
+
+async_session_maker = get_async_session_maker
