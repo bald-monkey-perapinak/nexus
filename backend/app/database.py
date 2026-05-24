@@ -117,3 +117,5 @@ async def get_session() -> AsyncSession:
 async def init_db():
     async with _get_engine().begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+async_session_maker = _get_session_maker
