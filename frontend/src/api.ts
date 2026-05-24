@@ -44,7 +44,7 @@ export const authTelegram = (initData: string) =>
 
 export const authGuest = () =>
   request<{ access_token: string }>(
-    'api/auth/guest', { method: 'POST' }
+    '/api/auth/guest', { method: 'POST' }
   )
 
 // Profile
