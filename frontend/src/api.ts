@@ -18,7 +18,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...(options.headers as Record<string, string> || {}),
   }
 
-  const res = await fetch(`${BASE}/${path}`, { ...options, headers })
+  const cleanBase = BASE.replace(/\/+$/, '')  // убираем слэши в конце
+  const cleanPath = path.replace(/^\/+/, '')  // убираем слэши в начале
+  const url = `${cleanBase}/${cleanPath}`
+  
+  const res = await fetch(url, { ...options, headers })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Network error' }))
     throw new Error(err.detail || `HTTP ${res.status}`)
