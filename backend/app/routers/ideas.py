@@ -47,7 +47,7 @@ async def generate_ideas(
 
 async def _run_generation_task(user_id: str, session_id: str, profile: dict):
     from app.database import async_session_maker
-    async with async_session_maker() as db:
+    async with async_session_maker()() as db:
         try:
             result = await run_idea_generation(user_id, session_id, profile)
             ideas = result.get("idea_candidates", [])
