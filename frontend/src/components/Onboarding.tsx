@@ -67,7 +67,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           <div style={{ animation: 'screenIn 0.3s var(--ease) both' }}>
             <Field label="Стартовый капитал" hint="Сколько готовы вложить">
               <div className="chips">
-                {['до 500к', '500к–2м', '2м–5м', '5м+'].map(o => (
+                {['до 100к', '100к–250k', '250k–500k', '500k+'].map(o => (
                   <Chip key={o} label={o} selected={p.capital_range === o} onClick={() => set('capital_range', o)} />
                 ))}
               </div>
