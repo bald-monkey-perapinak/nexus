@@ -18,7 +18,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...(options.headers as Record<string, string> || {}),
   }
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers })
+  const res = await fetch(`${BASE}/${path}`, { ...options, headers })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Network error' }))
     throw new Error(err.detail || `HTTP ${res.status}`)
