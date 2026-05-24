@@ -86,3 +86,20 @@ export const createFinancialModel = (sessionId: string, ideaId: string, adj?: ob
 
 export const getFinancialModel = (sessionId: string, ideaId: string) =>
   request<object>(`/financial/model/${sessionId}/${ideaId}`)
+
+export const startRoadmap = (sessionId: string, ideaId: string) =>
+  request<object>(`/roadmap/${sessionId}/${ideaId}`, { method: 'POST' })
+
+export const getRoadmap = (sessionId: string, ideaId: string) =>
+  request<object>(`/roadmap/${sessionId}/${ideaId}`)
+
+export const updateTaskStatus = (
+  sessionId: string,
+  ideaId: string,
+  taskId: string,
+  status: string
+) =>
+  request<object>(`/roadmap/${sessionId}/${ideaId}/task/${taskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
