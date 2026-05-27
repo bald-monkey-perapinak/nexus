@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ChevronLeft, RoadmapIllustration, CategoryIcon } from './Icons'
 
 interface Props { ideaId: string; sessionId: string; ideaTitle: string; onBack: () => void }
@@ -109,19 +109,87 @@ export function RoadmapScreen({ ideaId, sessionId, ideaTitle, onBack }: Props) {
   const [filter,   setFilter]   = useState('all')
   const [expanded, setExpanded] = useState<string | null>(null)
 
+  const pollRef = useRef<number | null>(null)
   const h = { 'Content-Type':'application/json', Authorization:`Bearer ${localStorage.getItem('nexus_token')}` }
 
   async function start() {
     setStatus('loading')
+  
     try {
-      await fetch(`/api/roadmap/${sessionId}/${ideaId}`, { method:'POST', headers:h })
-      const poll = setInterval(async () => {
-        const d = await (await fetch(`/api/roadmap/${sessionId}/${ideaId}`, { headers:h })).json()
-        if (d.status==='done')  { clearInterval(poll); setTasks(d.roadmap||[]); setStatus('done') }
-        if (d.status==='error') { clearInterval(poll); setError(d.error||'Ошибка'); setStatus('error') }
+      await fetch(
+        `${import.meta.env.VITE_API_URL}/api/roadmap/${sessionId}/${ideaId}`,
+        {
+          method: 'POST',
+          headers: h
+        }
+      )
+  
+      pollRef.current = window.setInterval(async () => {
+        try {
+          const res = await fetch(
+            `${import.meta.env.VITE_API_URL}/api/roadmap/${sessionId}/${ideaId}`,
+            {
+              headers: h
+            }
+          )
+  
+          // backend еще генерирует roadmap
+          if (res.status === 404) {
+            console.log('roadmap not ready yet')
+            return
+          }
+  
+          // другие ошибки
+          if (!res.ok) {
+            if (pollRef.current) {
+              clearInterval(pollRef.current)
+            }
+  
+            setError(`HTTP ${res.status}`)
+            setStatus('error')
+            return
+          }
+  
+          const d = await res.json()
+  
+          if (d.status === 'done') {
+            if (pollRef.current) {
+              clearInterval(pollRef.current)
+            }
+  
+            setTasks(d.roadmap || [])
+            setStatus('done')
+          }
+  
+          if (d.status === 'error') {
+            if (pollRef.current) {
+              clearInterval(pollRef.current)
+            }
+  
+            setError(d.error || 'Ошибка')
+            setStatus('error')
+          }
+  
+        } catch (e) {
+          if (pollRef.current) {
+            clearInterval(pollRef.current)
+          }
+  
+          setError((e as Error).message)
+          setStatus('error')
+        }
       }, 3500)
-      setTimeout(() => clearInterval(poll), 180_000)
-    } catch(e:unknown) { setError((e as Error).message); setStatus('error') }
+  
+      setTimeout(() => {
+        if (pollRef.current) {
+          clearInterval(pollRef.current)
+        }
+      }, 180_000)
+  
+    } catch (e: unknown) {
+      setError((e as Error).message)
+      setStatus('error')
+    }
   }
 
   async function updateStatus(id: string, s: Status) {
