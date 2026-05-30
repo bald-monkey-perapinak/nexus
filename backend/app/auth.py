@@ -3,11 +3,13 @@ import hmac
 import json
 import time
 import logging
+import uuid
 from urllib.parse import parse_qsl, unquote
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import HTTPException, Depends, Header
+from fastapi import HTTPException, Depends, Header, APIRouter
+from pydantic import BaseModel
 from passlib.context import CryptContext
 from app.config import settings
 
@@ -15,6 +17,26 @@ logger = logging.getLogger(__name__)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+router = APIRouter(prefix="/api/auth")
+class GuestAuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    full_name: str = "Guest User"
+    is_admin: bool = False
+
+@router.post("/guest", response_model=GuestAuthResponse)
+async def auth_guest():
+    """Гостевой вход — выдаёт временный токен без регистрации."""
+    user_id = str(uuid.uuid4())
+    
+    access_token = create_access_token(user_id)
+    
+    return GuestAuthResponse(
+        access_token=access_token,
+        user_id=user_id
+    )
 
 
 def hash_password(password: str) -> str:

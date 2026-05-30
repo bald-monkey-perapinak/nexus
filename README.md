@@ -349,7 +349,7 @@ ngrok http 4000
 ```json
 // Request
 {
-  "capital_range": "500к–2м",
+  "capital_range": "50к–200к",
   "format": "online",
   "business_type": ["B2C"],
   "team_size": "2–5",

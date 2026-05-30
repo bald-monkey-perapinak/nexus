@@ -1,13 +1,42 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker, AsyncEngine
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import Column, String, Integer, BigInteger, JSON, DateTime, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
+from typing import Optional
 import uuid
+import structlog
 from app.config import settings
 
-engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG)
-async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+log = structlog.get_logger()
+
+# Engine is created lazily on first use so that a missing or malformed
+# DATABASE_URL at import time does not crash the process before uvicorn
+# has a chance to bind and serve health-check requests.
+_engine: Optional[AsyncEngine] = None
+_session_maker: Optional[async_sessionmaker] = None
+
+
+def _get_engine() -> AsyncEngine:
+    global _engine, _session_maker
+    if _engine is None:
+        try:
+            _engine = create_async_engine(
+                settings.async_database_url,
+                echo=settings.DEBUG,
+                pool_pre_ping=True,
+            )
+            _session_maker = async_sessionmaker(_engine, expire_on_commit=False)
+            log.info("Database engine created", url=settings.async_database_url.split("@")[-1])
+        except Exception as exc:
+            log.error("Failed to create database engine", error=str(exc))
+            raise
+    return _engine
+
+
+def _get_session_maker() -> async_sessionmaker:
+    _get_engine()  # ensure engine + session_maker are initialised
+    return _session_maker
 
 
 class Base(DeclarativeBase):
@@ -81,10 +110,16 @@ class WeeklyCheckin(Base):
 
 
 async def get_session() -> AsyncSession:
-    async with async_session_maker() as session:
+    async with _get_session_maker()() as session:
         yield session
 
 
 async def init_db():
-    async with engine.begin() as conn:
+    async with _get_engine().begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+def get_async_session_maker():
+    """Returns the async_sessionmaker instance."""
+    return _get_session_maker()
+
+async_session_maker = get_async_session_maker

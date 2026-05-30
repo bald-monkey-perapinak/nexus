@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ChevronLeft } from './Icons'
 
 interface Props {
@@ -7,24 +7,94 @@ interface Props {
 }
 
 export function AnalyticsScreen({ ideaId, sessionId, ideaTitle, isOnline, onBack }: Props) {
+
+  console.log('AnalyticsScreen render')
+  
   const [status, setStatus] = useState<'idle'|'loading'|'done'|'error'>('idle')
   const [report, setReport] = useState<any>(null)
   const [error,  setError]  = useState('')
   const [tab,    setTab]    = useState<'market'|'competitors'|'strategy'>('market')
 
+  const pollRef = useRef<number | null>(null)
   const H = { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('nexus_token')}` }
 
   async function start() {
     setStatus('loading')
+  
     try {
-      await fetch(`/api/analytics/${sessionId}/${ideaId}`, { method: 'POST', headers: H })
-      const poll = setInterval(async () => {
-        const d = await (await fetch(`/api/analytics/${sessionId}/${ideaId}`, { headers: H })).json()
-        if (d.status === 'done')  { clearInterval(poll); setReport(d.report); setStatus('done') }
-        if (d.status === 'error') { clearInterval(poll); setError(d.error || 'Ошибка'); setStatus('error') }
+      await fetch(
+        `${import.meta.env.VITE_API_URL}/api/analytics/${sessionId}/${ideaId}`,
+        {
+          method: 'POST',
+          headers: H
+        }
+      )
+  
+      pollRef.current = window.setInterval(async () => {
+        try {
+          const res = await fetch(
+            `${import.meta.env.VITE_API_URL}/api/analytics/${sessionId}/${ideaId}`,
+            {
+              headers: H
+            }
+          )
+  
+          // backend еще не успел подготовить результат
+          if (res.status === 404) {
+            console.log('analytics not ready yet')
+            return
+          }
+  
+          if (!res.ok) {
+            if (pollRef.current) {
+              clearInterval(pollRef.current)
+            }
+  
+            setError(`HTTP ${res.status}`)
+            setStatus('error')
+            return
+          }
+  
+          const d = await res.json()
+  
+          if (d.status === 'done') {
+            if (pollRef.current) {
+              clearInterval(pollRef.current)
+            }
+  
+            setReport(d.report)
+            setStatus('done')
+          }
+  
+          if (d.status === 'error') {
+            if (pollRef.current) {
+              clearInterval(pollRef.current)
+            }
+  
+            setError(d.error || 'Ошибка')
+            setStatus('error')
+          }
+  
+        } catch (e) {
+          if (pollRef.current) {
+            clearInterval(pollRef.current)
+          }
+  
+          setError((e as Error).message)
+          setStatus('error')
+        }
       }, 3500)
-      setTimeout(() => clearInterval(poll), 180_000)
-    } catch (e: unknown) { setError((e as Error).message); setStatus('error') }
+  
+      setTimeout(() => {
+        if (pollRef.current) {
+          clearInterval(pollRef.current)
+        }
+      }, 180_000)
+  
+    } catch (e: unknown) {
+      setError((e as Error).message)
+      setStatus('error')
+    }
   }
 
   function Dot({ q }: { q?: string }) {

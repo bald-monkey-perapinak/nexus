@@ -12,6 +12,17 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@db:5432/nexus"
     REDIS_URL: str = "redis://redis:6379"
 
+    @property
+    def async_database_url(self) -> str:
+        """Return DATABASE_URL with the asyncpg driver, rewriting plain
+        postgresql:// or postgres:// URLs that Railway injects at runtime."""
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = "postgresql+asyncpg://" + url[len("postgres://"):]
+        elif url.startswith("postgresql://"):
+            url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+        return url
+
     # Authentication
     ADMIN_EMAILS: str = ""
 
@@ -30,6 +41,9 @@ class Settings(BaseSettings):
         if not self.ADMIN_EMAILS:
             return []
         return [x.strip() for x in self.ADMIN_EMAILS.split(",") if x.strip()]
+
+    # Frontend
+    FRONTEND_URL: str = ""
 
     # Tavily web search
     TAVILY_API_KEY: str = ""

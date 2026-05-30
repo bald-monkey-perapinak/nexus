@@ -10,6 +10,24 @@ import uuid
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+class GuestAuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    full_name: str = "Guest User"
+    is_admin: bool = False
+
+@router.post("/guest", response_model=GuestAuthResponse)
+async def auth_guest():
+    """Гостевой вход — выдаёт временный токен без регистрации."""
+    user_id = str(uuid.uuid4())
+    access_token = create_access_token(user_id)
+    
+    return GuestAuthResponse(
+        access_token=access_token,
+        user_id=user_id
+    )
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str

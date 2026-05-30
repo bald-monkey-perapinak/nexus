@@ -11,4 +11,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Exec-form CMD ensures uvicorn is PID 1 and receives signals directly.
+# --timeout-keep-alive 75 keeps connections alive slightly longer than
+# Railway's 60-second idle timeout to prevent premature disconnects.
+CMD ["uvicorn", "app.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--log-level", "info", \
+     "--timeout-keep-alive", "75"]

@@ -47,7 +47,7 @@ async def save_profile(
     existing = await db.execute(
         select(DBUserProfile).where(DBUserProfile.user_id == uuid.UUID(user_id))
     )
-    db_profile = existing.scalar_one_or_none()
+    db_profile = existing.scalars().first()
 
     if db_profile:
         db_profile.data = enriched_profile
