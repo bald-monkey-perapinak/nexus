@@ -2,17 +2,16 @@ import json
 import re
 import asyncio
 from langgraph.graph import StateGraph, END
-from langchain_groq import ChatGroq
-from app.config import settings
+from app.llm_router import get_router
+from app.llm_utils import ainvoke_with_fallback
 from typing import TypedDict, List, Annotated
 import operator
 
-llm = ChatGroq(model=settings.GROQ_MODEL, api_key=settings.GROQ_API_KEY, temperature=0.3, max_tokens=2000)
-llm_fast = ChatGroq(model=settings.GROQ_MODEL_FAST, api_key=settings.GROQ_API_KEY, temperature=0.2, max_tokens=600)
 
 def _parse(text: str):
     text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
     return json.loads(text)
+
 
 class ValidationState(TypedDict):
     user_id: str
@@ -24,6 +23,7 @@ class ValidationState(TypedDict):
     mvp_tests: List[dict]
     checklist: List[dict]
     errors: Annotated[List[str], operator.add]
+
 
 HYPOTHESES_PROMPT = """Определи 3-5 критических гипотез для проверки перед запуском бизнеса.
 Отвечай ТОЛЬКО JSON без markdown.
@@ -52,46 +52,56 @@ MVP_PROMPT = """Разработай 2-3 варианта MVP-теста от д
 
 {{"mvp_tests":[{{"name":"название теста","description":"как проводить (3-4 предложения)","budget_rub":5000,"duration_days":7,"success_metric":"конкретная метрика с числом","tools":["инструмент"],"steps":["шаг1","шаг2","шаг3"]}}]}}"""
 
+
 async def identify_hypotheses(state: ValidationState) -> ValidationState:
     idea = state["idea"]
+    router = get_router()
     try:
-        resp = await llm.ainvoke(HYPOTHESES_PROMPT.format(
-            title=idea["title"], description=idea.get("description",""),
+        content = await ainvoke_with_fallback(HYPOTHESES_PROMPT.format(
+            title=idea["title"], description=idea.get("description", ""),
             flags=", ".join(idea.get("all_flags", []))
-        ))
-        result = _parse(resp.content)
+        ), tier="heavy", temperature=0.3, max_tokens=2000)
+        result = _parse(content)
         return {**state, "hypotheses": result.get("hypotheses", [])}
     except Exception as e:
-        return {**state, "errors": [f"hypotheses_failed:{str(e)[:100]}"]}
+        from app.llm_utils import sanitize_exception
+        return {**state, "errors": [sanitize_exception(e, "hypotheses_failed")]}
+
 
 async def generate_custdev(state: ValidationState) -> ValidationState:
     idea = state["idea"]
     profile = state["profile"]
+    router = get_router()
     try:
-        resp = await llm.ainvoke(CUSTDEV_PROMPT.format(
+        content = await ainvoke_with_fallback(CUSTDEV_PROMPT.format(
             title=idea["title"],
             hypotheses=json.dumps(state["hypotheses"][:3], ensure_ascii=False),
             business_type=", ".join(profile.get("business_type", [])),
             city=profile.get("city", "не указан"),
-        ))
-        result = _parse(resp.content)
+        ), tier="heavy", temperature=0.3, max_tokens=2000)
+        result = _parse(content)
         return {**state, "custdev_script": result}
     except Exception as e:
-        return {**state, "errors": [f"custdev_failed:{str(e)[:100]}"]}
+        from app.llm_utils import sanitize_exception
+        return {**state, "errors": [sanitize_exception(e, "custdev_failed")]}
+
 
 async def design_mvp_test(state: ValidationState) -> ValidationState:
     idea = state["idea"]
     profile = state["profile"]
+    router = get_router()
     try:
-        resp = await llm.ainvoke(MVP_PROMPT.format(
-            title=idea["title"], description=idea.get("description",""),
-            capital_range=profile.get("capital_range",""),
-            format=profile.get("format",""),
-        ))
-        result = _parse(resp.content)
+        content = await ainvoke_with_fallback(MVP_PROMPT.format(
+            title=idea["title"], description=idea.get("description", ""),
+            capital_range=profile.get("capital_range", ""),
+            format=profile.get("format", ""),
+        ), tier="heavy", temperature=0.3, max_tokens=2000)
+        result = _parse(content)
         return {**state, "mvp_tests": result.get("mvp_tests", [])}
     except Exception as e:
-        return {**state, "errors": [f"mvp_failed:{str(e)[:100]}"]}
+        from app.llm_utils import sanitize_exception
+        return {**state, "errors": [sanitize_exception(e, "mvp_failed")]}
+
 
 def build_checklist(state: ValidationState) -> ValidationState:
     checklist = []
@@ -102,19 +112,20 @@ def build_checklist(state: ValidationState) -> ValidationState:
             "statement": h["statement"],
             "priority": h["priority"],
             "status": "todo",
-            "method": "custdev" if h["type"] in ["demand","pricing"] else "mvp_test",
+            "method": "custdev" if h["type"] in ["demand", "pricing"] else "mvp_test",
         })
     for i, test in enumerate(state.get("mvp_tests", [])):
         checklist.append({
             "id": f"mvp_{i}",
-            "title": test.get("name",""),
+            "title": test.get("name", ""),
             "budget_rub": test.get("budget_rub", 0),
             "duration_days": test.get("duration_days", 7),
-            "success_metric": test.get("success_metric",""),
+            "success_metric": test.get("success_metric", ""),
             "status": "todo",
             "method": "mvp_test",
         })
     return {**state, "checklist": checklist}
+
 
 def build_validation_graph():
     g = StateGraph(ValidationState)
@@ -129,7 +140,9 @@ def build_validation_graph():
     g.add_edge("build_checklist", END)
     return g.compile()
 
+
 validation_graph = build_validation_graph()
+
 
 async def run_validation(user_id: str, session_id: str, idea: dict, profile: dict) -> dict:
     return await validation_graph.ainvoke({

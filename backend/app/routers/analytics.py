@@ -9,6 +9,7 @@ import uuid
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 _results: dict = {}
 
+
 @router.post("/{session_id}/{idea_id}")
 async def start_analytics(
     session_id: str, idea_id: str,
@@ -20,7 +21,8 @@ async def start_analytics(
     session = await db.get(GenerationSession, uuid.UUID(session_id))
     if not session or str(session.user_id) != user_id:
         raise HTTPException(404, "Session not found")
-    idea = next((i for i in (session.idea_candidates or []) if i.get("id") == idea_id), None)
+    idea = next((i for i in (session.idea_candidates or [])
+                if i.get("id") == idea_id), None)
     if not idea:
         raise HTTPException(404, "Idea not found")
     profile_rec = await db.execute(select(DBUserProfile).where(DBUserProfile.user_id == uuid.UUID(user_id)))
@@ -34,12 +36,16 @@ async def start_analytics(
     async def task():
         try:
             r = await run_analytics(user_id, session_id, idea, profile.data)
-            _results[key] = {"status": "done", "report": r.get("report", {}), "errors": r.get("errors", [])}
+            _results[key] = {"status": "done", "report": r.get(
+                "report", {}), "errors": r.get("errors", [])}
         except Exception as e:
-            _results[key] = {"status": "error", "error": str(e)[:300]}
+            from app.llm_utils import sanitize_exception
+            _results[key] = {"status": "error",
+                             "error": sanitize_exception(e, "analytics_task")}
 
     background_tasks.add_task(task)
     return {"status": "running"}
+
 
 @router.get("/{session_id}/{idea_id}")
 async def get_analytics(

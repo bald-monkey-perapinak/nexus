@@ -10,6 +10,7 @@ import structlog
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Optional
+import asyncio
 from langchain_core.language_models import BaseChatModel
 from langchain_groq import ChatGroq
 
@@ -36,12 +37,12 @@ class ProviderState:
 class LLMRouter:
     """
     Роутер с автоматическим fallback между провайдерами.
-    
+
     Порядок для тяжёлых запросов (70b):
       1. Groq llama-3.3-70b
       2. Gemini Flash (если настроен)
       3. OpenRouter llama-70b (если настроен)
-    
+
     Порядок для лёгких запросов (дискриминаторы):
       1. Groq llama-3.1-8b
       2. OpenRouter mistral-7b (если настроен)
@@ -68,7 +69,8 @@ class LLMRouter:
                 temperature=0.7,
                 max_tokens=4096,
             )))
-            self._states["groq_70b"] = ProviderState("groq_70b", cooldown_sec=65)
+            self._states["groq_70b"] = ProviderState(
+                "groq_70b", cooldown_sec=65)
 
         # 2. Gemini Flash
         if s.GEMINI_API_KEY:
@@ -80,10 +82,12 @@ class LLMRouter:
                     temperature=0.7,
                     max_output_tokens=4096,
                 )))
-                self._states["gemini_flash"] = ProviderState("gemini_flash", cooldown_sec=30)
+                self._states["gemini_flash"] = ProviderState(
+                    "gemini_flash", cooldown_sec=30)
                 log.info("Gemini Flash provider enabled")
             except ImportError:
-                log.warning("langchain-google-genai not installed, Gemini disabled")
+                log.warning(
+                    "langchain-google-genai not installed, Gemini disabled")
 
         # 3. OpenRouter (через OpenAI-совместимый API)
         if s.OPENROUTER_API_KEY:
@@ -100,10 +104,12 @@ class LLMRouter:
                         "X-Title": "Nexus Business Platform",
                     },
                 )))
-                self._states["openrouter_70b"] = ProviderState("openrouter_70b", cooldown_sec=10)
+                self._states["openrouter_70b"] = ProviderState(
+                    "openrouter_70b", cooldown_sec=10)
                 log.info("OpenRouter 70b provider enabled")
             except ImportError:
-                log.warning("langchain-openai not installed, OpenRouter disabled")
+                log.warning(
+                    "langchain-openai not installed, OpenRouter disabled")
 
         # --- Лёгкие модели (дискриминаторы, обогащение) ---
         self._fast: list[tuple[str, callable]] = []
@@ -133,7 +139,8 @@ class LLMRouter:
                         "X-Title": "Nexus Business Platform",
                     },
                 )))
-                self._states["openrouter_mistral"] = ProviderState("openrouter_mistral", cooldown_sec=10)
+                self._states["openrouter_mistral"] = ProviderState(
+                    "openrouter_mistral", cooldown_sec=10)
             except ImportError:
                 pass
 
@@ -147,7 +154,8 @@ class LLMRouter:
                     temperature=0.1,
                     max_output_tokens=600,
                 )))
-                self._states["gemini_flash_fast"] = ProviderState("gemini_flash_fast", cooldown_sec=30)
+                self._states["gemini_flash_fast"] = ProviderState(
+                    "gemini_flash_fast", cooldown_sec=30)
             except ImportError:
                 pass
 
@@ -157,47 +165,67 @@ class LLMRouter:
             fast_providers=[n for n, _ in self._fast],
         )
 
-    def _is_available(self, state: ProviderState) -> bool:
-        if state.status == ProviderStatus.OK:
-            return True
-        if state.status == ProviderStatus.RATE_LIMITED:
-            if time.time() - state.failed_at > state.cooldown_sec:
-                state.status = ProviderStatus.OK
-                state.fail_count = 0
-                log.info("Provider recovered", provider=state.name)
+    async def _is_available(self, state: ProviderState) -> bool:
+        async with self._lock:
+            if state.status == ProviderStatus.OK:
+                return True
+            if state.status == ProviderStatus.RATE_LIMITED:
+                if time.time() - state.failed_at > state.cooldown_sec:
+                    state.status = ProviderStatus.OK
+                    state.fail_count = 0
+                    log.info("Provider recovered", provider=state.name)
+                    return True
+                return False
+            if state.status == ProviderStatus.ERROR:
+                # После 3 ошибок — пауза 5 минут
+                if state.fail_count >= 3 and time.time() - state.failed_at < 300:
+                    return False
                 return True
             return False
-        if state.status == ProviderStatus.ERROR:
-            # После 3 ошибок — пауза 5 минут
-            if state.fail_count >= 3 and time.time() - state.failed_at < 300:
-                return False
-            return True
-        return False
 
-    def _mark_rate_limited(self, name: str):
+    async def _mark_rate_limited(self, name: str):
         if name in self._states:
-            s = self._states[name]
-            s.status = ProviderStatus.RATE_LIMITED
-            s.failed_at = time.time()
-            log.warning("Provider rate limited", provider=name, cooldown=s.cooldown_sec)
+            async with self._lock:
+                s = self._states[name]
+                s.status = ProviderStatus.RATE_LIMITED
+                s.failed_at = time.time()
+                log.warning("Provider rate limited",
+                            provider=name, cooldown=s.cooldown_sec)
 
-    def _mark_error(self, name: str, error: str):
+    async def _mark_error(self, name: str, error: str):
         if name in self._states:
-            s = self._states[name]
-            s.status = ProviderStatus.ERROR
-            s.failed_at = time.time()
-            s.fail_count += 1
-            log.error("Provider error", provider=name, error=error, fail_count=s.fail_count)
+            async with self._lock:
+                s = self._states[name]
+                s.status = ProviderStatus.ERROR
+                s.failed_at = time.time()
+                s.fail_count += 1
+                log.error("Provider error", provider=name,
+                          error=error, fail_count=s.fail_count)
 
-    def _mark_ok(self, name: str):
+    async def _mark_ok(self, name: str):
         if name in self._states:
-            s = self._states[name]
-            if s.status != ProviderStatus.OK:
-                log.info("Provider back to OK", provider=name)
-            s.status = ProviderStatus.OK
-            s.fail_count = 0
+            async with self._lock:
+                s = self._states[name]
+                if s.status != ProviderStatus.OK:
+                    log.info("Provider back to OK", provider=name)
+                s.status = ProviderStatus.OK
+                s.fail_count = 0
 
     def _is_rate_limit_error(self, error: Exception) -> bool:
+        # Inspect exception for common attributes (status_code, code, response)
+        try:
+            if hasattr(error, "status_code") and int(getattr(error, "status_code", 0)) == 429:
+                return True
+            if hasattr(error, "code") and str(getattr(error, "code", "")).lower().startswith("rate"):
+                return True
+            if hasattr(error, "response"):
+                resp = getattr(error, "response")
+                sc = getattr(resp, "status_code", None) or getattr(
+                    resp, "status", None)
+                if sc and int(sc) == 429:
+                    return True
+        except Exception:
+            pass
         msg = str(error).lower()
         return any(x in msg for x in ["429", "rate limit", "rate_limit", "quota", "too many requests"])
 
@@ -223,28 +251,36 @@ class LLMRouter:
     ) -> str:
         last_error = None
 
+        # timeouts per tier
+        timeout = 60 if tier == "heavy" else 15
+
         for name, factory in providers:
             state = self._states.get(name)
-            if state and not self._is_available(state):
-                log.debug("Skipping unavailable provider", provider=name, tier=tier)
-                continue
+            if state:
+                avail = await self._is_available(state)
+                if not avail:
+                    log.debug("Skipping unavailable provider",
+                              provider=name, tier=tier)
+                    continue
 
             try:
                 log.debug("Trying provider", provider=name, tier=tier)
                 llm = factory()
-                resp = await llm.ainvoke(prompt)
-                content = resp.content if hasattr(resp, "content") else str(resp)
-                self._mark_ok(name)
+                resp = await asyncio.wait_for(llm.ainvoke(prompt), timeout=timeout)
+                content = resp.content if hasattr(
+                    resp, "content") else str(resp)
+                await self._mark_ok(name)
                 log.debug("Provider success", provider=name, tier=tier)
                 return content
 
             except Exception as e:
                 last_error = e
                 if self._is_rate_limit_error(e):
-                    self._mark_rate_limited(name)
+                    await self._mark_rate_limited(name)
                 else:
-                    self._mark_error(name, str(e)[:100])
-                log.warning("Provider failed, trying next", provider=name, error=str(e)[:100])
+                    await self._mark_error(name, str(e)[:200])
+                log.warning("Provider failed, trying next",
+                            provider=name, error=str(e)[:200])
                 continue
 
         # Все провайдеры недоступны
@@ -278,5 +314,6 @@ def init_router(settings) -> LLMRouter:
 
 def get_router() -> LLMRouter:
     if _router is None:
-        raise RuntimeError("LLM Router not initialized. Call init_router() first.")
+        raise RuntimeError(
+            "LLM Router not initialized. Call init_router() first.")
     return _router
