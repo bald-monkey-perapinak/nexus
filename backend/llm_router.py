@@ -1,13 +1,13 @@
 """
-NEXUS · LLM Router (Gemini-first stable version)
+NEXUS · LLM Router (stable production version)
 
-Стратегия:
-  1. Gemini Flash (primary, most stable free tier)
+Strategy:
+  1. Gemini Flash (primary)
   2. Groq (fast fallback)
-  3. OpenRouter (optional, best-effort only)
+  3. OpenRouter (optional best-effort)
 
-Главное правило:
-→ НИ ОДИН провайдер не может сломать систему
+Guarantee:
+→ No provider can crash the system
 """
 
 import asyncio
@@ -22,9 +22,9 @@ from langchain_core.language_models import BaseChatModel
 log = structlog.get_logger()
 
 
-# -------------------------
+# =========================================================
 # STATUS
-# -------------------------
+# =========================================================
 
 class ProviderStatus(Enum):
     OK = "ok"
@@ -41,29 +41,28 @@ class ProviderState:
     cooldown_sec: int = 30
 
 
-# -------------------------
+# =========================================================
 # ROUTER
-# -------------------------
+# =========================================================
 
 class LLMRouter:
     def __init__(self, settings):
         self.settings = settings
         self._states: dict[str, ProviderState] = {}
+        self._heavy: list[tuple[str, Callable[[], BaseChatModel]]] = []
         self._build_providers()
 
-    # -------------------------
+    # =========================================================
     # BUILD PROVIDERS
-    # -------------------------
+    # =========================================================
 
     def _build_providers(self):
         s = self.settings
 
-        self._heavy: list[tuple[str, Callable[[], BaseChatModel]]] = []
-
-        # =========================================================
-        # 1. GEMINI (PRIMARY - ALWAYS FIRST)
-        # =========================================================
-        if s.GEMINI_API_KEY:
+        # -------------------------
+        # 1. GEMINI (PRIMARY)
+        # -------------------------
+        if getattr(s, "GEMINI_API_KEY", None):
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -78,15 +77,15 @@ class LLMRouter:
                 self._heavy.append(("gemini", gemini_factory))
                 self._states["gemini"] = ProviderState("gemini", cooldown_sec=10)
 
-                log.info("Gemini provider enabled")
+                log.info("Gemini enabled")
 
             except ImportError:
-                log.warning("Gemini library missing (langchain-google-genai)")
+                log.warning("Gemini library not installed")
 
-        # =========================================================
-        # 2. GROQ (FAST FALLBACK)
-        # =========================================================
-        if s.GROQ_API_KEY:
+        # -------------------------
+        # 2. GROQ (FALLBACK)
+        # -------------------------
+        if getattr(s, "GROQ_API_KEY", None):
             from langchain_groq import ChatGroq
 
             def groq_factory():
@@ -100,12 +99,12 @@ class LLMRouter:
             self._heavy.append(("groq", groq_factory))
             self._states["groq"] = ProviderState("groq", cooldown_sec=60)
 
-            log.info("Groq provider enabled")
+            log.info("Groq enabled")
 
-        # =========================================================
-        # 3. OPENROUTER (OPTIONAL / BEST EFFORT)
-        # =========================================================
-        if s.OPENROUTER_API_KEY:
+        # -------------------------
+        # 3. OPENROUTER (BEST EFFORT)
+        # -------------------------
+        if getattr(s, "OPENROUTER_API_KEY", None):
             try:
                 from langchain_openai import ChatOpenAI
 
@@ -116,7 +115,6 @@ class LLMRouter:
                 ]
 
                 def openrouter_factory():
-                    # try multiple models until one works
                     last_err = None
 
                     for model in OPENROUTER_MODELS:
@@ -136,27 +134,36 @@ class LLMRouter:
                             last_err = e
                             continue
 
-                    raise RuntimeError(f"OpenRouter all models failed: {last_err}")
+                    raise RuntimeError(f"OpenRouter failed: {last_err}")
 
                 self._heavy.append(("openrouter", openrouter_factory))
                 self._states["openrouter"] = ProviderState("openrouter", cooldown_sec=15)
 
-                log.info("OpenRouter provider enabled")
+                log.info("OpenRouter enabled")
 
             except ImportError:
-                log.warning("langchain-openai not installed")
+                log.warning("OpenRouter library not installed")
 
-        # final order log
-        log.info(
-            "LLM Router ready",
-            providers=[name for name, _ in self._heavy],
-        )
+        log.info("LLM Router ready", providers=[p[0] for p in self._heavy])
 
-    # -------------------------
-    # INVOKE
-    # -------------------------
+    # =========================================================
+    # PUBLIC API (COMPATIBLE)
+    # =========================================================
 
     async def invoke(self, prompt: str) -> str:
+        return await self._invoke(prompt)
+
+    async def invoke_heavy(self, prompt: str) -> str:
+        return await self._invoke(prompt)
+
+    async def invoke_fast(self, prompt: str) -> str:
+        return await self._invoke(prompt)
+
+    # =========================================================
+    # CORE LOGIC
+    # =========================================================
+
+    async def _invoke(self, prompt: str) -> str:
         last_error = None
 
         for name, factory in self._heavy:
@@ -170,9 +177,7 @@ class LLMRouter:
 
                 llm = factory()
 
-                # IMPORTANT: always pass string, not chat messages
                 resp = await llm.ainvoke(prompt)
-
                 content = resp.content if hasattr(resp, "content") else str(resp)
 
                 self._mark_ok(name)
@@ -182,20 +187,16 @@ class LLMRouter:
             except Exception as e:
                 last_error = e
                 self._mark_error(name, str(e))
+
                 log.warning("Provider failed", provider=name, error=str(e)[:120])
 
                 continue
 
-        raise RuntimeError(f"All LLM providers failed. Last error: {last_error}")
-    async def invoke_heavy(self, prompt: str) -> str:
-      return await self.invoke(prompt)
-  
-  
-    async def invoke_fast(self, prompt: str) -> str:
-        return await self.invoke(prompt)
-    # -------------------------
-    # STATE LOGIC
-    # -------------------------
+        raise RuntimeError(f"All providers failed. Last error: {last_error}")
+
+    # =========================================================
+    # STATE MANAGEMENT
+    # =========================================================
 
     def _is_available(self, state: ProviderState) -> bool:
         if state.status == ProviderStatus.OK:
@@ -232,9 +233,9 @@ class LLMRouter:
             state.status = ProviderStatus.OK
             state.fail_count = 0
 
-    # -------------------------
+    # =========================================================
     # HEALTH
-    # -------------------------
+    # =========================================================
 
     def get_status(self):
         return {
@@ -246,9 +247,9 @@ class LLMRouter:
         }
 
 
-# -------------------------
+# =========================================================
 # SINGLETON
-# -------------------------
+# =========================================================
 
 _router: Optional[LLMRouter] = None
 
