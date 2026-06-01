@@ -9,7 +9,8 @@ interface Props {
 export function AnalyticsScreen({ ideaId, sessionId, ideaTitle, isOnline, onBack }: Props) {
 
   console.log('AnalyticsScreen render')
-  
+  console.log('STATUS:', status)
+  console.log('REPORT:', report)
   const [status, setStatus] = useState<'idle'|'loading'|'done'|'error'>('idle')
   const [report, setReport] = useState<any>(null)
   const [error,  setError]  = useState('')
@@ -135,7 +136,7 @@ export function AnalyticsScreen({ ideaId, sessionId, ideaTitle, isOnline, onBack
     { key: 'competitors' as const, label: '⚔️ Конкуренты' },
     { key: 'strategy'    as const, label: '🎯 Стратегия' },
   ]
-
+  console.log('BEFORE RETURN')
   return (
     <div className="screen">
       <button className="btn btn-ghost" onClick={onBack} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:16 }}>
