@@ -1,16 +1,9 @@
 import json
 import re
 from langgraph.graph import StateGraph, END
-from langchain_groq import ChatGroq
 from app.state import FinancialModelState
-from app.config import settings
-
-llm = ChatGroq(
-    model=settings.GROQ_MODEL,
-    api_key=settings.GROQ_API_KEY,
-    temperature=0.2,
-    max_tokens=2000,
-)
+from app.llm_router import get_router
+from app.llm_utils import ainvoke_with_fallback
 
 
 def _parse_json(text: str):
@@ -78,8 +71,9 @@ UNIT_ECONOMICS_PROMPT = """Рассчитай юнит-экономику биз
 async def generate_base_assumptions(state: FinancialModelState) -> FinancialModelState:
     idea = state["idea"]
     profile = state["profile"]
+    router = get_router()
     try:
-        resp = await llm.ainvoke(ASSUMPTIONS_PROMPT.format(
+        prompt = ASSUMPTIONS_PROMPT.format(
             title=idea["title"],
             description=idea.get("description", ""),
             city_tier=profile.get("city_tier", "3"),
@@ -87,11 +81,13 @@ async def generate_base_assumptions(state: FinancialModelState) -> FinancialMode
             format=profile.get("format", ""),
             team_size=profile.get("team_size", "1-2"),
             capital_range=profile.get("capital_range", ""),
-        ))
-        assumptions = _parse_json(resp.content)
+        )
+        content = await ainvoke_with_fallback(prompt, tier="heavy", temperature=0.2, max_tokens=2000)
+        assumptions = _parse_json(content)
         return {**state, "assumptions": assumptions, "errors": []}
     except Exception as e:
-        return {**state, "errors": [f"assumptions_failed:{str(e)[:100]}"]}
+        from app.llm_utils import sanitize_exception
+        return {**state, "errors": [sanitize_exception(e, "assumptions_failed")]}
 
 
 def calculate_scenarios(state: FinancialModelState) -> FinancialModelState:
@@ -99,18 +95,19 @@ def calculate_scenarios(state: FinancialModelState) -> FinancialModelState:
     adj = state.get("user_adjustments", {})
 
     avg_check = adj.get("avg_check", a.get("avg_check_rub", 5000))
-    clients   = adj.get("monthly_clients", a.get("monthly_clients_base", 30))
-    fixed     = adj.get("fixed_costs", a.get("fixed_costs_monthly", {}).get("total", 200000))
-    var_pct   = adj.get("variable_cost_pct", a.get("variable_cost_pct", 30))
-    startup   = a.get("startup_costs", {}).get("total", 300000)
+    clients = adj.get("monthly_clients", a.get("monthly_clients_base", 30))
+    fixed = adj.get("fixed_costs", a.get(
+        "fixed_costs_monthly", {}).get("total", 200000))
+    var_pct = adj.get("variable_cost_pct", a.get("variable_cost_pct", 30))
+    startup = a.get("startup_costs", {}).get("total", 300000)
 
     def calc(check_mult: float, client_mult: float) -> dict:
-        rev        = avg_check * check_mult * clients * client_mult
-        var_costs  = rev * (var_pct / 100)
-        profit     = rev - var_costs - fixed
+        rev = avg_check * check_mult * clients * client_mult
+        var_costs = rev * (var_pct / 100)
+        profit = rev - var_costs - fixed
         margin_unit = avg_check * check_mult * (1 - var_pct / 100)
         be_clients = round(fixed / margin_unit) if margin_unit > 0 else 9999
-        payback    = round(startup / profit, 1) if profit > 0 else None
+        payback = round(startup / profit, 1) if profit > 0 else None
         return {
             "monthly_revenue":        round(rev),
             "monthly_variable_costs": round(var_costs),
@@ -129,27 +126,31 @@ def calculate_scenarios(state: FinancialModelState) -> FinancialModelState:
 
 
 async def generate_unit_economics(state: FinancialModelState) -> FinancialModelState:
-    idea    = state["idea"]
+    idea = state["idea"]
     profile = state["profile"]
-    a       = state.get("assumptions", {})
+    a = state.get("assumptions", {})
+    router = get_router()
     try:
-        resp = await llm.ainvoke(UNIT_ECONOMICS_PROMPT.format(
+        prompt = UNIT_ECONOMICS_PROMPT.format(
             title=idea["title"],
             format=profile.get("format", ""),
             business_type=", ".join(profile.get("business_type", [])),
             avg_check=a.get("avg_check_rub", 5000),
-            marketing_budget=a.get("fixed_costs_monthly", {}).get("marketing", 30000),
+            marketing_budget=a.get("fixed_costs_monthly",
+                                   {}).get("marketing", 30000),
             monthly_clients=a.get("monthly_clients_base", 30),
-        ))
-        ue = _parse_json(resp.content)
+        )
+        content = await ainvoke_with_fallback(prompt, tier="heavy", temperature=0.2, max_tokens=800)
+        ue = _parse_json(content)
         return {**state, "unit_economics": ue}
     except Exception as e:
-        return {**state, "unit_economics": {}, "errors": [f"unit_econ_failed:{str(e)[:100]}"]}
+        from app.llm_utils import sanitize_exception
+        return {**state, "unit_economics": {}, "errors": [sanitize_exception(e, "unit_econ_failed")]}
 
 
 def validate_model(state: FinancialModelState) -> FinancialModelState:
     scenarios = state.get("scenarios", {})
-    warnings  = []
+    warnings = []
 
     pess = scenarios.get("pessimistic", {})
     if pess.get("monthly_profit", 0) < -500_000:
@@ -159,9 +160,9 @@ def validate_model(state: FinancialModelState) -> FinancialModelState:
     if ue.get("ltv_cac_ratio", 2) < 1:
         warnings.append("unit_economics_negative")
 
-    base  = scenarios.get("base", {})
+    base = scenarios.get("base", {})
     fixed = base.get("monthly_fixed_costs", 0)
-    rev   = base.get("monthly_revenue", 1)
+    rev = base.get("monthly_revenue", 1)
     if rev > 0 and fixed / rev > 0.8:
         warnings.append("high_fixed_cost_ratio")
 

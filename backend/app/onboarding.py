@@ -2,16 +2,9 @@ import json
 import re
 from typing import Literal
 from langgraph.graph import StateGraph, END
-from langchain_groq import ChatGroq
 from app.state import OnboardingState
-from app.config import settings
-
-llm = ChatGroq(
-    model=settings.GROQ_MODEL,
-    api_key=settings.GROQ_API_KEY,
-    temperature=0.3,
-    max_tokens=1000,
-)
+from app.llm_router import get_router
+from app.llm_utils import ainvoke_with_fallback
 
 REQUIRED_FIELDS = ["capital_range", "format", "business_type", "team_size"]
 
@@ -32,7 +25,7 @@ ENRICH_PROMPT = """Ты — ассистент платформы Nexus для �
 }}
 
 Правила city_tier: 1=Москва/СПб, 2=города-миллионники, 3=остальные, online=онлайн.
-Правила implied_segment: micro=до 100к или 100к–250к, small=250к–500к, medium=500к+.
+Правила implied_segment: micro=до 500к, small=500к-2м, medium=2м+.
 
 Профиль:
 {profile}"""
@@ -48,15 +41,19 @@ def validate_input(state: OnboardingState) -> OnboardingState:
 
 async def enrich_profile(state: OnboardingState) -> OnboardingState:
     profile = state["profile"]
+    router = get_router()
     try:
-        resp = await llm.ainvoke(ENRICH_PROMPT.format(
+        prompt = ENRICH_PROMPT.format(
             profile=json.dumps(profile, ensure_ascii=False)
-        ))
-        text = re.sub(r"```(?:json)?", "", resp.content.strip()).strip().rstrip("`").strip()
+        )
+        content = await ainvoke_with_fallback(prompt, tier="fast", temperature=0.3, max_tokens=400)
+        text = re.sub(r"```(?:json)?", "", content.strip()
+                      ).strip().rstrip("`").strip()
         enriched = json.loads(text)
         return {**state, "profile": {**profile, **enriched}, "errors": []}
     except Exception as e:
-        return {**state, "profile": {**profile, "city_tier": "3", "implied_segment": "small"}, "errors": [str(e)[:80]]}
+        from app.llm_utils import sanitize_exception
+        return {**state, "profile": {**profile, "city_tier": "3", "implied_segment": "small"}, "errors": [sanitize_exception(e, "enrich_profile_failed")]}
 
 
 def calculate_completeness(state: OnboardingState) -> OnboardingState:

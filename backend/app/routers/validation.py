@@ -4,12 +4,14 @@ from sqlalchemy import select
 from app.database import get_session, GenerationSession, UserProfile as DBUserProfile
 from app.auth import get_current_user
 from app.validation import run_validation
-import uuid, json
+import uuid
+import json
 
 router = APIRouter(prefix="/api/validation", tags=["validation"])
 
 # Simple in-memory store for validation results (use DB in prod)
 _results: dict = {}
+
 
 @router.post("/{session_id}/{idea_id}")
 async def start_validation(
@@ -23,7 +25,8 @@ async def start_validation(
     if not session or str(session.user_id) != user_id:
         raise HTTPException(404, "Session not found")
 
-    idea = next((i for i in (session.idea_candidates or []) if i.get("id") == idea_id), None)
+    idea = next((i for i in (session.idea_candidates or [])
+                if i.get("id") == idea_id), None)
     if not idea:
         raise HTTPException(404, "Idea not found")
 
@@ -40,10 +43,13 @@ async def start_validation(
             result = await run_validation(user_id, session_id, idea, profile.data)
             _results[key] = {"status": "done", **result}
         except Exception as e:
-            _results[key] = {"status": "error", "error": str(e)[:300]}
+            from app.llm_utils import sanitize_exception
+            _results[key] = {"status": "error",
+                             "error": sanitize_exception(e, "validation_task")}
 
     background_tasks.add_task(task)
     return {"status": "running", "key": key}
+
 
 @router.get("/{session_id}/{idea_id}")
 async def get_validation(

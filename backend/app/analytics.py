@@ -7,10 +7,8 @@ import asyncio
 from typing import TypedDict, List, Annotated
 import operator
 from langgraph.graph import StateGraph, END
-from app.llm_utils import make_llm, extract_json, safe_extract_json
+from app.llm_utils import ainvoke_with_fallback, extract_json, safe_extract_json
 from app.config import settings
-
-llm = make_llm(temperature=0.2, max_tokens=3000)
 
 
 class AnalyticsState(TypedDict):
@@ -37,12 +35,15 @@ async def tavily_search(query: str, max_results: int = 5) -> List[dict]:
         )
         return resp.get("results", [])
     except Exception as e:
-        return [{"error": str(e)[:100]}]
+        from app.llm_utils import sanitize_exception
+        return [{"error": sanitize_exception(e, "tavily_search_failed")}]
 
 
 async def search_competitors(state: AnalyticsState) -> AnalyticsState:
-    idea = state["idea"]; profile = state["profile"]
-    fmt = profile.get("format", "offline"); city = profile.get("city", "")
+    idea = state["idea"]
+    profile = state["profile"]
+    fmt = profile.get("format", "offline")
+    city = profile.get("city", "")
     if fmt == "offline" and city:
         queries = [
             f"{idea['title']} {city} конкуренты компании отзывы цены",
@@ -60,7 +61,8 @@ async def search_competitors(state: AnalyticsState) -> AnalyticsState:
 
 
 async def search_marketplace(state: AnalyticsState) -> AnalyticsState:
-    profile = state["profile"]; idea = state["idea"]
+    profile = state["profile"]
+    idea = state["idea"]
     if profile.get("format") not in ("online", "hybrid"):
         return {**state, "marketplace_results": []}
     results = []
@@ -73,7 +75,8 @@ async def search_marketplace(state: AnalyticsState) -> AnalyticsState:
 
 
 async def search_market(state: AnalyticsState) -> AnalyticsState:
-    idea = state["idea"]; results = []
+    idea = state["idea"]
+    results = []
     for q in [
         f"рынок {idea['title']} Россия объём 2024 2025 млрд",
         f"тренды {idea['title']} Россия рост статистика",
@@ -143,7 +146,8 @@ def _fmt(results: List[dict]) -> str:
     for r in results[:8]:
         if "error" in r:
             continue
-        parts.append(f"• {r.get('title','')}\n  {r.get('content','')[:280]}\n  {r.get('url','')}")
+        parts.append(
+            f"• {r.get('title', '')}\n  {r.get('content', '')[:280]}\n  {r.get('url', '')}")
     return "\n\n".join(parts) if parts else "результаты пусты"
 
 
@@ -155,7 +159,7 @@ FALLBACK_REPORT = {
     },
     "competitors": [],
     "marketplace_presence": {"relevant": False, "seller_count_estimate": None,
-                              "competition_level": "medium", "key_finding": "недоступно"},
+                             "competition_level": "medium", "key_finding": "недоступно"},
     "gaps": ["Добавьте TAVILY_API_KEY в .env для реального поиска"],
     "competitor_strategies": [],
     "entry_barriers": [],
@@ -166,7 +170,8 @@ FALLBACK_REPORT = {
 
 
 async def synthesize_report(state: AnalyticsState) -> AnalyticsState:
-    idea = state["idea"]; profile = state["profile"]
+    idea = state["idea"]
+    profile = state["profile"]
     prompt = SYNTHESIS_PROMPT.format(
         title=idea["title"], description=idea.get("description", ""),
         city=profile.get("city", "не указан"),
@@ -177,11 +182,12 @@ async def synthesize_report(state: AnalyticsState) -> AnalyticsState:
         marketplace_data=_fmt(state.get("marketplace_results", [])),
     )
     try:
-        resp = await llm.ainvoke(prompt)
-        report = safe_extract_json(resp.content, FALLBACK_REPORT)
+        content = await ainvoke_with_fallback(prompt, tier="heavy", temperature=0.2, max_tokens=3000)
+        report = safe_extract_json(content, FALLBACK_REPORT)
         return {**state, "report": report}
     except Exception as e:
-        return {**state, "report": FALLBACK_REPORT, "errors": [str(e)[:100]]}
+        from app.llm_utils import sanitize_exception
+        return {**state, "report": FALLBACK_REPORT, "errors": [sanitize_exception(e, "synthesis_failed")]}
 
 
 # LangGraph doesn't support fan-in natively without reducers,
@@ -199,7 +205,9 @@ def build_analytics_graph():
     g.add_edge("synthesize_report",  END)
     return g.compile()
 
+
 analytics_graph = build_analytics_graph()
+
 
 async def run_analytics(user_id: str, session_id: str, idea: dict, profile: dict) -> dict:
     return await analytics_graph.ainvoke({

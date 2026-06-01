@@ -19,11 +19,13 @@ async def generate_ideas(
 
     # Get user profile
     result = await db.execute(
-        select(DBUserProfile).where(DBUserProfile.user_id == uuid.UUID(user_id))
+        select(DBUserProfile).where(
+            DBUserProfile.user_id == uuid.UUID(user_id))
     )
     profile_rec = result.scalar_one_or_none()
     if not profile_rec:
-        raise HTTPException(status_code=400, detail="Profile not found. Complete onboarding first.")
+        raise HTTPException(
+            status_code=400, detail="Profile not found. Complete onboarding first.")
 
     # Create session
     session = GenerationSession(
@@ -64,10 +66,11 @@ async def _run_generation_task(user_id: str, session_id: str, profile: dict):
                 rec.error_message = "; ".join(errors) if errors else None
                 await db.commit()
         except Exception as e:
+            from app.llm_utils import sanitize_exception
             rec = await db.get(GenerationSession, uuid.UUID(session_id))
             if rec:
                 rec.status = "error"
-                rec.error_message = str(e)[:500]
+                rec.error_message = sanitize_exception(e, "generation_task")
                 await db.commit()
 
 

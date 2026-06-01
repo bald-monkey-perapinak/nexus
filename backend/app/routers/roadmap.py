@@ -12,8 +12,10 @@ router = APIRouter(prefix="/api/roadmap", tags=["roadmap"])
 
 _results: dict = {}
 
+
 class TaskStatusUpdate(BaseModel):
     status: str  # "todo" | "in_progress" | "done"
+
 
 @router.post("/{session_id}/{idea_id}")
 async def start_roadmap(
@@ -27,7 +29,8 @@ async def start_roadmap(
     if not session or str(session.user_id) != user_id:
         raise HTTPException(404, "Session not found")
 
-    idea = next((i for i in (session.idea_candidates or []) if i.get("id") == idea_id), None)
+    idea = next((i for i in (session.idea_candidates or [])
+                if i.get("id") == idea_id), None)
     if not idea:
         raise HTTPException(404, "Idea not found")
 
@@ -53,12 +56,16 @@ async def start_roadmap(
     async def task():
         try:
             result = await run_roadmap(user_id, session_id, idea, profile.data, all_flags, financial)
-            _results[key] = {"status": "done", "roadmap": result["roadmap"], "errors": result.get("errors", [])}
+            _results[key] = {
+                "status": "done", "roadmap": result["roadmap"], "errors": result.get("errors", [])}
         except Exception as e:
-            _results[key] = {"status": "error", "error": str(e)[:300]}
+            from app.llm_utils import sanitize_exception
+            _results[key] = {"status": "error",
+                             "error": sanitize_exception(e, "roadmap_task")}
 
     background_tasks.add_task(task)
     return {"status": "running", "key": key}
+
 
 @router.get("/{session_id}/{idea_id}")
 async def get_roadmap(
@@ -70,6 +77,7 @@ async def get_roadmap(
     if not result:
         raise HTTPException(404, "Roadmap not started")
     return result
+
 
 @router.patch("/{session_id}/{idea_id}/task/{task_id}")
 async def update_task_status(
