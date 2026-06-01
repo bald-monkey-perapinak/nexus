@@ -109,9 +109,9 @@ class LLMRouter:
                 from langchain_openai import ChatOpenAI
 
                 OPENROUTER_MODELS = [
-                    "mistralai/mistral-7b-instruct",
-                    "google/gemma-2-9b-it",
-                    "meta-llama/llama-3.1-8b-instruct",
+                    "meta-llama/llama-3.1-8b-instruct:free",
+                    "mistralai/mistral-small-3.1-24b-instruct:free",
+                    "google/gemma-2-9b-it:free"
                 ]
 
                 def openrouter_factory():
