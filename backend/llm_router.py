@@ -90,7 +90,7 @@ class LLMRouter:
             try:
                 from langchain_openai import ChatOpenAI
                 self._heavy.append(("openrouter_70b", lambda api_key=s.OPENROUTER_API_KEY: ChatOpenAI(
-                    model="mistralai/mistral-7b-instruct:free",
+                    model="meta-llama/llama-3-8b-instruct:free",
                     base_url="https://openrouter.ai/api/v1",
                     api_key=api_key,
                     temperature=0.7,
