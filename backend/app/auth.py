@@ -128,14 +128,34 @@ def create_access_token(user_id: str) -> str:
 
 def decode_token(token: str) -> dict:
     try:
-        return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-    except JWTError:
+        print("JWT_SECRET:", settings.JWT_SECRET)
+        print("JWT_ALGORITHM:", settings.JWT_ALGORITHM)
+
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET,
+            algorithms=[settings.JWT_ALGORITHM]
+        )
+
+        print("PAYLOAD:", payload)
+
+        return payload
+
+    except JWTError as e:
+        print("JWT ERROR:", repr(e))
         raise HTTPException(status_code=401, detail="Invalid token")
 
-
 async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
+    print("AUTH HEADER:", authorization)
+
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
-            status_code=401, detail="Missing authorization header")
+            status_code=401,
+            detail="Missing authorization header"
+        )
+
     token = authorization.removeprefix("Bearer ")
+
+    print("TOKEN:", token)
+
     return decode_token(token)

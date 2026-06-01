@@ -153,7 +153,22 @@ export function IdeaDetail({ idea, onBack, onBuildModel, onValidate, onRoadmap, 
 
       <div className="sticky-footer">
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <button className="btn btn-outline btn-sm" onClick={onAnalytics} style={{ flex: 1 }}>🔍 Рынок</button>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => {
+              console.log('MARKET BUTTON CLICKED')
+              console.log('onAnalytics:', onAnalytics)
+          
+              try {
+                onAnalytics()
+              } catch (e) {
+                console.error('onAnalytics crash:', e)
+              }
+            }}
+            style={{ flex: 1 }}
+          >
+            🔍 Рынок
+          </button>
           <button className="btn btn-outline btn-sm" onClick={onValidate}  style={{ flex: 1 }}>✅ Валидация</button>
           <button className="btn btn-outline btn-sm" onClick={onRoadmap}   style={{ flex: 1 }}>🗺️ Роадмап</button>
         </div>

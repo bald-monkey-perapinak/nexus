@@ -14,14 +14,30 @@ export function AnalyticsScreen({ ideaId, sessionId, ideaTitle, isOnline, onBack
   const [report, setReport] = useState<any>(null)
   const [error,  setError]  = useState('')
   const [tab,    setTab]    = useState<'market'|'competitors'|'strategy'>('market')
-
+  console.log('STATUS:', status)
+  console.log('REPORT:', report)
   const pollRef = useRef<number | null>(null)
   const H = { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('nexus_token')}` }
 
   async function start() {
+    console.log('START CLICKED')
     setStatus('loading')
   
     try {
+      console.log('API URL:', import.meta.env.VITE_API_URL)
+      console.log('TOKEN:', localStorage.getItem('nexus_token'))
+      console.log('SESSION:', sessionId)
+      console.log('IDEA:', ideaId)
+      const url = `${import.meta.env.VITE_API_URL}/api/analytics/${sessionId}/${ideaId}`
+  
+      console.log('FETCH URL:', url)
+  
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: H
+      })
+  
+      console.log('POST RESPONSE:', r.status)
       await fetch(
         `${import.meta.env.VITE_API_URL}/api/analytics/${sessionId}/${ideaId}`,
         {
@@ -120,7 +136,7 @@ export function AnalyticsScreen({ ideaId, sessionId, ideaTitle, isOnline, onBack
     { key: 'competitors' as const, label: '⚔️ Конкуренты' },
     { key: 'strategy'    as const, label: '🎯 Стратегия' },
   ]
-
+  console.log('BEFORE RETURN')
   return (
     <div className="screen">
       <button className="btn btn-ghost" onClick={onBack} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:16 }}>

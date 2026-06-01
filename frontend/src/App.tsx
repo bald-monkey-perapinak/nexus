@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { authTelegram, authGuest, saveProfile, generateIdeas, setToken, getToken } from './api'
 import type { AppScreen, IdeaCard, UserProfile, Contradiction } from './types'
 
+import { AnalyticsScreen }     from './components/Analytics'
 import { Splash }               from './components/Splash'
 import { Onboarding }           from './components/Onboarding'
 import { Generating }           from './components/Generating'
@@ -11,7 +12,11 @@ import { FinancialModelScreen } from './components/FinancialModel'
 import { ValidationScreen }     from './components/Validation'
 import { RoadmapScreen }        from './components/Roadmap'
 
-type Screen = AppScreen | 'validation' | 'roadmap'
+type Screen =
+  | AppScreen
+  | 'validation'
+  | 'roadmap'
+  | 'analytics'
 
 /** Определяем, запущено ли приложение внутри Telegram WebApp */
 function isTelegramEnv(): boolean {
@@ -131,7 +136,13 @@ export default function App() {
           onBuildModel={() => setScreen('financial')}
           onValidate={() => setScreen('validation')}
           onRoadmap={() => setScreen('roadmap')}
-          onAnalytics={() => setScreen('dashboard')}
+          onAnalytics={() => {
+          console.log('SWITCHING TO ANALYTICS')
+          console.log('IDEA:', idea)
+          console.log('SESSION:', sessionId)
+
+  setScreen('analytics')
+}}
         />
       )}
 
@@ -157,6 +168,15 @@ export default function App() {
           ideaId={idea.id}
           sessionId={sessionId}
           ideaTitle={idea.title}
+          onBack={() => setScreen('idea_detail')}
+        />
+      )}
+      {screen === 'analytics' && idea && (
+        <AnalyticsScreen
+          ideaId={idea.id}
+          sessionId={sessionId}
+          ideaTitle={idea.title}
+          isOnline={idea.is_online || false}
           onBack={() => setScreen('idea_detail')}
         />
       )}

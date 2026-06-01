@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import init_db, _get_engine
-from app.routers import auth, profile, ideas, financial, validation, roadmap
+from app.routers import auth, profile, ideas, financial, validation, roadmap, analytics
 from app.config import settings
+from llm_router import init_router
 import asyncio
 import structlog
 from sqlalchemy import text
@@ -37,6 +38,8 @@ async def lifespan(app: FastAPI):
     # Fire-and-forget: schedule DB init as a background task so the app
     # becomes ready to serve requests (health checks, etc.) immediately.
     asyncio.create_task(_init_db_background())
+    init_router(settings)
+    log.info("LLM Router initialized")
     yield
     log.info("Nexus API shutdown complete")
 
@@ -67,6 +70,7 @@ app.include_router(ideas.router)
 app.include_router(financial.router)
 app.include_router(validation.router)
 app.include_router(roadmap.router)
+app.include_router(analytics.router)
 
 
 @app.get("/api/health")
