@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from app.database import init_db, _get_engine
 from app.routers import auth, profile, ideas, financial, validation, roadmap
 from app.config import settings
-from app.llm_router import init_router
+from llm_router import init_router
 import asyncio
 import structlog
 from sqlalchemy import text
