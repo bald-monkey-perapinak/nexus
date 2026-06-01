@@ -23,6 +23,7 @@ from langchain_groq import ChatGroq
 from app.state import IdeaGenerationState, Contradiction
 from app.config import settings
 from app.validation_checklist import validate_idea_comprehensive, CITY_TIER_CONFIG
+from app.llm_router import get_router
 
 # ── LLM instances ────────────────────────────────────────────────────
 _llm = None
@@ -350,8 +351,8 @@ async def generate_candidates(state: IdeaGenerationState) -> IdeaGenerationState
             has_partners=p.get("has_partners", False),
             contradictions_summary=contradictions_summary,
         )
-        resp = await get_llm().ainvoke(prompt)
-        ideas = _parse(resp.content)
+        resp = await get_router().invoke_heavy(prompt)
+        ideas = _parse(resp)
         if not isinstance(ideas, list):
             raise ValueError("Expected JSON array")
         return {**state, "idea_candidates": ideas[:10], "status": "discriminating"}
@@ -741,13 +742,13 @@ ENRICH_PROMPT = """Обогати карточку бизнес-идеи. Отв
 async def enrich_cards(state: IdeaGenerationState) -> IdeaGenerationState:
     async def enrich_one(idea: dict) -> dict:
         try:
-            resp = await get_llm_fast().ainvoke(ENRICH_PROMPT.format(
-                title=idea.get("title", ""),
-                description=idea.get("description", ""),
-                score=idea.get("total_score", 50),
-                flags=", ".join(idea.get("all_flags", [])) or "нет",
-            ))
-            extra = _parse(resp.content)
+            resp = await get_router().invoke_fast(ENRICH_PROMPT.format(
+    title=idea.get("title", ""),
+    description=idea.get("description", ""),
+    score=idea.get("total_score", 50),
+    flags=", ".join(idea.get("all_flags", [])) or "нет",
+))
+            extra = _parse(resp)
             return {**idea, **extra}
         except Exception:
             return idea
