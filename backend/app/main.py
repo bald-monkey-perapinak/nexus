@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import init_db, _get_engine
-from app.routers import auth, profile, ideas, financial, validation, roadmap
+from app.routers import auth, profile, ideas, financial, validation, roadmap, analytics
 from app.config import settings
 from llm_router import init_router
 import asyncio
@@ -70,6 +70,7 @@ app.include_router(ideas.router)
 app.include_router(financial.router)
 app.include_router(validation.router)
 app.include_router(roadmap.router)
+app.include_router(analytics.router)
 
 
 @app.get("/api/health")
