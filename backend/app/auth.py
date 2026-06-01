@@ -132,10 +132,17 @@ def decode_token(token: str) -> dict:
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-
 async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
+    print("AUTH HEADER:", authorization)
+
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
-            status_code=401, detail="Missing authorization header")
+            status_code=401,
+            detail="Missing authorization header"
+        )
+
     token = authorization.removeprefix("Bearer ")
+
+    print("TOKEN:", token)
+
     return decode_token(token)
