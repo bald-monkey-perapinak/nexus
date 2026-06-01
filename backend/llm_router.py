@@ -187,7 +187,12 @@ class LLMRouter:
                 continue
 
         raise RuntimeError(f"All LLM providers failed. Last error: {last_error}")
-
+    async def invoke_heavy(self, prompt: str) -> str:
+      return await self.invoke(prompt)
+  
+  
+    async def invoke_fast(self, prompt: str) -> str:
+        return await self.invoke(prompt)
     # -------------------------
     # STATE LOGIC
     # -------------------------
