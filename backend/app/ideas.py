@@ -23,7 +23,7 @@ from langchain_groq import ChatGroq
 from app.state import IdeaGenerationState, Contradiction
 from app.config import settings
 from app.validation_checklist import validate_idea_comprehensive, CITY_TIER_CONFIG
-from app.llm_router import get_router
+from llm_router import get_router
 
 # ── LLM instances ────────────────────────────────────────────────────
 _llm = None
