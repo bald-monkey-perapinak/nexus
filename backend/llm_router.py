@@ -75,7 +75,7 @@ class LLMRouter:
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
                 self._heavy.append(("gemini_flash", lambda google_api_key=s.GEMINI_API_KEY: ChatGoogleGenerativeAI(
-                    model="gemini-1.5-flash",
+                    model="gemini-1.5-flash-latest",
                     google_api_key=google_api_key,
                     temperature=0.7,
                     max_output_tokens=4096,
@@ -90,7 +90,7 @@ class LLMRouter:
             try:
                 from langchain_openai import ChatOpenAI
                 self._heavy.append(("openrouter_70b", lambda api_key=s.OPENROUTER_API_KEY: ChatOpenAI(
-                    model="meta-llama/llama-3-8b-instruct:free",
+                    model="mistralai/mistral-7b-instruct:free",
                     base_url="https://openrouter.ai/api/v1",
                     api_key=api_key,
                     temperature=0.7,
@@ -142,7 +142,7 @@ class LLMRouter:
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
                 self._fast.append(("gemini_flash_fast", lambda google_api_key=s.GEMINI_API_KEY: ChatGoogleGenerativeAI(
-                    model="gemini-1.5-flash",
+                    model="gemini-1.5-flash-latest",
                     google_api_key=google_api_key,
                     temperature=0.1,
                     max_output_tokens=600,
