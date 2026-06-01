@@ -50,6 +50,7 @@ export interface IdeaCard {
   market_score?: number
   ops_score?: number
   location_score?: number
+  is_online?: boolean
 }
 
 export interface FinancialScenario {
