@@ -62,9 +62,9 @@ class LLMRouter:
 
         # 1. Groq 70b
         if s.GROQ_API_KEY:
-            self._heavy.append(("groq_70b", lambda: ChatGroq(
+            self._heavy.append(("groq_70b", lambda api_key=s.GROQ_API_KEY: ChatGroq(
                 model=s.GROQ_MODEL,
-                api_key=s.GROQ_API_KEY,
+                api_key=api_key,
                 temperature=0.7,
                 max_tokens=4096,
             )))
@@ -74,9 +74,9 @@ class LLMRouter:
         if s.GEMINI_API_KEY:
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
-                self._heavy.append(("gemini_flash", lambda: ChatGoogleGenerativeAI(
+                self._heavy.append(("gemini_flash", lambda google_api_key=s.GEMINI_API_KEY: ChatGoogleGenerativeAI(
                     model="gemini-1.5-flash",
-                    google_api_key=s.GEMINI_API_KEY,
+                    google_api_key=google_api_key,
                     temperature=0.7,
                     max_output_tokens=4096,
                 )))
@@ -89,10 +89,10 @@ class LLMRouter:
         if s.OPENROUTER_API_KEY:
             try:
                 from langchain_openai import ChatOpenAI
-                self._heavy.append(("openrouter_70b", lambda: ChatOpenAI(
+                self._heavy.append(("openrouter_70b", lambda api_key=s.OPENROUTER_API_KEY: ChatOpenAI(
                     model="meta-llama/llama-3.1-70b-instruct:free",
                     base_url="https://openrouter.ai/api/v1",
-                    api_key=s.OPENROUTER_API_KEY,
+                    api_key=api_key,
                     temperature=0.7,
                     max_tokens=4096,
                     default_headers={
@@ -110,9 +110,9 @@ class LLMRouter:
 
         # 1. Groq 8b
         if s.GROQ_API_KEY:
-            self._fast.append(("groq_8b", lambda: ChatGroq(
+            self._fast.append(("groq_8b", lambda api_key=s.GROQ_API_KEY: ChatGroq(
                 model=s.GROQ_MODEL_FAST,
-                api_key=s.GROQ_API_KEY,
+                api_key=api_key,
                 temperature=0.1,
                 max_tokens=600,
             )))
@@ -122,10 +122,10 @@ class LLMRouter:
         if s.OPENROUTER_API_KEY:
             try:
                 from langchain_openai import ChatOpenAI
-                self._fast.append(("openrouter_mistral", lambda: ChatOpenAI(
+                self._fast.append(("openrouter_mistral", lambda api_key=s.OPENROUTER_API_KEY: ChatOpenAI(
                     model="mistralai/mistral-7b-instruct:free",
                     base_url="https://openrouter.ai/api/v1",
-                    api_key=s.OPENROUTER_API_KEY,
+                    api_key=api_key,
                     temperature=0.1,
                     max_tokens=600,
                     default_headers={
@@ -138,12 +138,12 @@ class LLMRouter:
                 pass
 
         # 3. Gemini Flash как fallback для лёгких тоже
-        if s.GEMINI_API_KEY and "gemini_flash" in self._states:
+        if s.GEMINI_API_KEY:
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
-                self._fast.append(("gemini_flash_fast", lambda: ChatGoogleGenerativeAI(
+                self._fast.append(("gemini_flash_fast", lambda google_api_key=s.GEMINI_API_KEY: ChatGoogleGenerativeAI(
                     model="gemini-1.5-flash",
-                    google_api_key=s.GEMINI_API_KEY,
+                    google_api_key=google_api_key,
                     temperature=0.1,
                     max_output_tokens=600,
                 )))
