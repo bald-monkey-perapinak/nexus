@@ -9,13 +9,13 @@ interface Props {
 export function AnalyticsScreen({ ideaId, sessionId, ideaTitle, isOnline, onBack }: Props) {
 
   console.log('AnalyticsScreen render')
-  console.log('STATUS:', status)
-  console.log('REPORT:', report)
+  
   const [status, setStatus] = useState<'idle'|'loading'|'done'|'error'>('idle')
   const [report, setReport] = useState<any>(null)
   const [error,  setError]  = useState('')
   const [tab,    setTab]    = useState<'market'|'competitors'|'strategy'>('market')
-
+  console.log('STATUS:', status)
+  console.log('REPORT:', report)
   const pollRef = useRef<number | null>(null)
   const H = { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('nexus_token')}` }
 
